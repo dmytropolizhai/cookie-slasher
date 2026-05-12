@@ -1,105 +1,9 @@
 import { create } from 'zustand';
-import type {
-  CookieEntity,
-  CookieHalf,
-  Particle,
-  SlashTrail,
-  ComboState,
-  ComboRank,
-  GameState,
-  GamePhase,
-} from '../types';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+import { Store } from './types';
+import { calcRank, RANK_MULTIPLIERS } from './helpers';
+import { defaultCombo, defaultGame } from './default';
 
-const RANK_THRESHOLDS: { rank: ComboRank; min: number }[] = [
-  { rank: 'SSS', min: 50 },
-  { rank: 'SS', min: 30 },
-  { rank: 'S', min: 20 },
-  { rank: 'A', min: 12 },
-  { rank: 'B', min: 7 },
-  { rank: 'C', min: 3 },
-  { rank: 'D', min: 0 },
-];
-
-const RANK_MULTIPLIERS: Record<ComboRank, number> = {
-  D: 1, C: 1.2, B: 1.5, A: 2, S: 3, SS: 5, SSS: 8,
-};
-
-function calcRank(count: number): ComboRank {
-  return (RANK_THRESHOLDS.find((t) => count >= t.min)?.rank ?? 'D');
-}
-
-// ─── Store Shape ─────────────────────────────────────────────────────────────
-
-interface Store {
-  // Game state
-  game: GameState;
-  setPhase: (phase: GamePhase) => void;
-  addScore: (pts: number) => void;
-  addReiki: (amount: number) => void;
-  takeDamage: (dmg: number) => void;
-  setTimeScale: (ts: number) => void;
-  triggerShake: (intensity: number) => void;
-  decayShake: () => void;
-  triggerCritical: () => void;
-  tickCritical: (dt: number) => void;
-  resetGame: () => void;
-  nextWave: () => void;
-
-  // Cookies
-  cookies: CookieEntity[];
-  addCookie: (c: CookieEntity) => void;
-  removeCookie: (id: string) => void;
-  updateCookie: (id: string, patch: Partial<CookieEntity>) => void;
-  clearCookies: () => void;
-
-  // Cookie halves
-  halves: CookieHalf[];
-  addHalf: (h: CookieHalf) => void;
-  removeHalf: (id: string) => void;
-  clearHalves: () => void;
-
-  // Particles
-  particles: Particle[];
-  addParticle: (p: Particle) => void;
-  removeParticle: (id: string) => void;
-  clearParticles: () => void;
-
-  // Slash trail
-  slash: SlashTrail;
-  pushSlashPoint: (x: number, y: number, time: number) => void;
-  setSlashActive: (active: boolean) => void;
-  pruneSlash: (cutoffTime: number) => void;
-
-  // Combo
-  combo: ComboState;
-  incrementCombo: () => void;
-  breakCombo: (partial?: boolean) => void;
-  tickCombo: (dt: number) => void;
-}
-
-const defaultGame: GameState = {
-  phase: 'menu',
-  score: 0,
-  reiki: 0,
-  hp: 5,
-  maxHp: 5,
-  wave: 1,
-  timeScale: 1,
-  screenShake: 0,
-  criticalActive: false,
-  criticalTimer: 0,
-};
-
-const defaultCombo: ComboState = {
-  count: 0,
-  rank: 'D',
-  multiplier: 1,
-  decayTimer: 0,
-  maxDecay: 3,
-  flash: false,
-};
 
 export const useStore = create<Store>((set, get) => ({
   game: { ...defaultGame },
@@ -109,7 +13,7 @@ export const useStore = create<Store>((set, get) => ({
   slash: { points: [], active: false },
   combo: { ...defaultCombo },
 
-  // ── Game ──────────────────────────────────────────────────────────────────
+  // Game
   setPhase: (phase) => set((s) => ({ game: { ...s.game, phase } })),
 
   addScore: (pts) =>
@@ -160,7 +64,7 @@ export const useStore = create<Store>((set, get) => ({
   nextWave: () =>
     set((s) => ({ game: { ...s.game, wave: s.game.wave + 1 } })),
 
-  // ── Cookies ───────────────────────────────────────────────────────────────
+  // Cookies
   addCookie: (c) => set((s) => ({ cookies: [...s.cookies, c] })),
   removeCookie: (id) => set((s) => ({ cookies: s.cookies.filter((c) => c.id !== id) })),
   updateCookie: (id, patch) =>
@@ -169,18 +73,18 @@ export const useStore = create<Store>((set, get) => ({
     })),
   clearCookies: () => set(() => ({ cookies: [] })),
 
-  // ── Halves ────────────────────────────────────────────────────────────────
+  // Halves
   addHalf: (h) => set((s) => ({ halves: [...s.halves, h] })),
   removeHalf: (id) => set((s) => ({ halves: s.halves.filter((h) => h.id !== id) })),
   clearHalves: () => set(() => ({ halves: [] })),
-
-  // ── Particles ─────────────────────────────────────────────────────────────
+  
+  // Particles
   addParticle: (p) => set((s) => ({ particles: [...s.particles, p] })),
   removeParticle: (id) =>
     set((s) => ({ particles: s.particles.filter((p) => p.id !== id) })),
   clearParticles: () => set(() => ({ particles: [] })),
 
-  // ── Slash ─────────────────────────────────────────────────────────────────
+  // Slash 
   pushSlashPoint: (x, y, time) =>
     set((s) => ({
       slash: {
@@ -199,7 +103,7 @@ export const useStore = create<Store>((set, get) => ({
       },
     })),
 
-  // ── Combo ─────────────────────────────────────────────────────────────────
+  // Combo
   incrementCombo: () =>
     set((s) => {
       const count = s.combo.count + 1;
