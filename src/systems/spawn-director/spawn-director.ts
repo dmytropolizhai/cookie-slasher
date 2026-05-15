@@ -1,7 +1,8 @@
 import { buildWaveConfig } from './wave-config';
 import { pickCookieType } from './cookie-selector';
 
-import type { WaveConfig, CookieType } from '@/types';
+import type { WaveConfig } from '@/types';
+import type { CookieType } from '@/types/cookie';
 
 /**
  * Spawn director
