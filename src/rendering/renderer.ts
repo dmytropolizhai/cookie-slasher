@@ -1,13 +1,7 @@
-import type {
-  CookieEntity,
-  CookieHalf,
-  Particle,
-  SlashTrail,
-  GameState,
-} from '../types';
+import { CookieEntity, CookieHalf } from '@/types/cookie';
+import type { Particle, SlashTrail, GameState } from '@/types';
 
-// ─── Cookie Pixel-Art Renderer ───────────────────────────────────────────────
-
+// Cookie rendering
 function drawCookie(
   ctx: CanvasRenderingContext2D,
   cookie: CookieEntity,
@@ -35,7 +29,7 @@ function drawCookie(
         : '#FF9966';
   }
 
-  // ── Body ──
+  // Body
   if (type === 'bomb') {
     // Dark sphere with red warning markings
     const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
