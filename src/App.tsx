@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useStore } from './store';
-import { useGameLoop } from './game/use-game-loop';
+import { useGameLoop } from '@/core/use-game-loop';
 import { HUD } from './components/hud';
 import { MenuScreen } from './components/menu-screen';
 import { GameOverScreen } from './components/game-over-screen';
