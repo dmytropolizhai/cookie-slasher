@@ -12,7 +12,7 @@ import {
   makeImpactSparks,
   recycleParticle,
 } from '../particles/particle-factory';
-import { renderFrame } from '../rendering/renderer';
+import { renderFrame } from '@/core/rendering';
 import type { CookieEntity, CookieHalf, Vec2 } from '../types';
 
 let _entityId = 0;
