@@ -1,79 +1,18 @@
-import type { Particle, ParticleType, Vec2, CookieType } from '../types';
+import type { Particle, Vec2, CookieType } from '@/types';
+import { makeParticle } from './make-particle';
+import { COOKIE_COLORS, NEON_COLORS } from './colors';
 
-let _id = 0;
-const uid = () => `p${++_id}`;
-
-// ─── Pool ─────────────────────────────────────────────────────────────────────
-
-const pool: Particle[] = [];
-
-function acquire(): Particle {
-  return (
-    pool.pop() ?? {
-      id: uid(),
-      type: 'crumb',
-      pos: { x: 0, y: 0 },
-      vel: { x: 0, y: 0 },
-      size: 4,
-      alpha: 1,
-      color: '#fff',
-      life: 1,
-      maxLife: 1,
-      rotation: 0,
-      rotationSpeed: 0,
-      gravity: 0,
-      shrink: 0,
-    }
-  );
-}
-
-export function recycleParticle(p: Particle): void {
-  if (pool.length < 500) pool.push(p);
-}
-
-// ─── Factories ────────────────────────────────────────────────────────────────
 
 function rand(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-function makeParticle(
-  type: ParticleType,
-  pos: Vec2,
-  vel: Vec2,
-  size: number,
-  color: string,
-  maxLife: number,
-  extras?: Partial<Particle>
-): Particle {
-  const p = acquire();
-  p.id = uid();
-  p.type = type;
-  p.pos = { ...pos };
-  p.vel = { ...vel };
-  p.size = size;
-  p.alpha = 1;
-  p.color = color;
-  p.life = 1;
-  p.maxLife = maxLife;
-  p.rotation = rand(0, Math.PI * 2);
-  p.rotationSpeed = rand(-4, 4);
-  p.gravity = 180;
-  p.shrink = 0;
-  Object.assign(p, extras);
-  return p;
-}
-
-// ─── Crumb Burst ─────────────────────────────────────────────────────────────
-
-const COOKIE_COLORS: Record<CookieType, string[]> = {
-  normal: ['#D4955A', '#C47A3A', '#E8B080', '#F5D6A8'],
-  golden: ['#FFD700', '#FFA500', '#FFEC6E', '#FF8C00'],
-  fake: ['#8B4513', '#666', '#333', '#A0522D'],
-  bomb: ['#FF4444', '#FF0000', '#FF6600', '#333'],
-  boss: ['#9B00FF', '#FF0080', '#00FFFF', '#FFD700'],
-};
-
+/**
+ * Cookie crumbs burst
+ * @param pos - Position of the cookie
+ * @param cookieType - Type of the cookie
+ * @param count - Number of particles to create
+ */
 export function makeCrumbs(pos: Vec2, cookieType: CookieType, count = 12): Particle[] {
   const colors = COOKIE_COLORS[cookieType];
   return Array.from({ length: count }, () => {
@@ -91,8 +30,12 @@ export function makeCrumbs(pos: Vec2, cookieType: CookieType, count = 12): Parti
   });
 }
 
-// ─── Goo Splatter ─────────────────────────────────────────────────────────────
-
+/**
+ * Goo splatter effect
+ * @param pos - Position of the cookie
+ * @param cookieType - Type of the cookie
+ * @param count - Number of particles to create
+ */
 export function makeGoo(pos: Vec2, cookieType: CookieType, count = 8): Particle[] {
   const gooColor = cookieType === 'golden' ? '#FFD700' : cookieType === 'fake' ? '#4A4A00' : '#D4622A';
   return Array.from({ length: count }, () => {
@@ -110,8 +53,12 @@ export function makeGoo(pos: Vec2, cookieType: CookieType, count = 8): Particle[
   });
 }
 
-// ─── Slash Particles ──────────────────────────────────────────────────────────
-
+/**
+ * Slash particles
+ * @param pos - Position of the slash
+ * @param angle - Angle of the slash
+ * @param count - Number of particles to create
+ */
 export function makeSlashParticles(pos: Vec2, angle: number, count = 6): Particle[] {
   return Array.from({ length: count }, () => {
     const spread = rand(-0.5, 0.5);
@@ -129,8 +76,11 @@ export function makeSlashParticles(pos: Vec2, angle: number, count = 6): Particl
   });
 }
 
-// ─── Critical Particles ───────────────────────────────────────────────────────
-
+/**
+ * Critical burst particles
+ * @param pos - Position of the burst
+ * @param count - Number of particles to create
+ */
 export function makeCriticalBurst(pos: Vec2, count = 20): Particle[] {
   return Array.from({ length: count }, () => {
     const angle = rand(0, Math.PI * 2);
@@ -148,8 +98,11 @@ export function makeCriticalBurst(pos: Vec2, count = 20): Particle[] {
   });
 }
 
-// ─── Impact Spark ─────────────────────────────────────────────────────────────
-
+/**
+ * Impact sparks particles
+ * @param pos - Position of the impact
+ * @param count - Number of particles to create
+ */
 export function makeImpactSparks(pos: Vec2, count = 10): Particle[] {
   return Array.from({ length: count }, () => {
     const angle = rand(-Math.PI, 0);
@@ -166,8 +119,10 @@ export function makeImpactSparks(pos: Vec2, count = 10): Particle[] {
   });
 }
 
-// ─── Sakura Petals ────────────────────────────────────────────────────────────
-
+/**
+ * Sakura petal particles
+ * @param canvasWidth - Width of the canvas
+ */
 export function makeSakuraPetal(canvasWidth: number): Particle {
   const pos: Vec2 = { x: rand(0, canvasWidth), y: -20 };
   const vel: Vec2 = { x: rand(-30, 30), y: rand(20, 60) };
@@ -182,8 +137,11 @@ export function makeSakuraPetal(canvasWidth: number): Particle {
   );
 }
 
-// ─── Explosion ────────────────────────────────────────────────────────────────
-
+/**
+ * Explosion particles
+ * @param pos - Position of the explosion
+ * @param count - Number of particles to create
+ */
 export function makeExplosion(pos: Vec2, count = 24): Particle[] {
   return Array.from({ length: count }, () => {
     const angle = rand(0, Math.PI * 2);
@@ -201,10 +159,12 @@ export function makeExplosion(pos: Vec2, count = 24): Particle[] {
   });
 }
 
-// ─── Neon Fragment ────────────────────────────────────────────────────────────
-
+/**
+ * Neon fragments particles
+ * @param pos - Position of the fragments
+ * @param count - Number of particles to create
+ */
 export function makeNeonFragments(pos: Vec2, count = 8): Particle[] {
-  const neonColors = ['#FF0080', '#00FFFF', '#FFE600', '#9B00FF', '#00FF88'];
   return Array.from({ length: count }, () => {
     const angle = rand(0, Math.PI * 2);
     const speed = rand(100, 280);
@@ -213,7 +173,7 @@ export function makeNeonFragments(pos: Vec2, count = 8): Particle[] {
       pos,
       { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
       rand(2, 6),
-      neonColors[Math.floor(Math.random() * neonColors.length)],
+      NEON_COLORS[Math.floor(Math.random() * NEON_COLORS.length)],
       rand(0.3, 0.8),
       { gravity: 60, shrink: 0.5 }
     );
