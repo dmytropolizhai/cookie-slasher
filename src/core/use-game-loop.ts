@@ -11,7 +11,7 @@ import {
   makeSakuraPetal,
   makeImpactSparks,
   recycleParticle,
-} from '../particles/particle-factory';
+} from './particles/particle-factory';
 import { renderFrame } from '@/core/rendering';
 import type { CookieEntity, CookieHalf, Vec2 } from '../types';
 
