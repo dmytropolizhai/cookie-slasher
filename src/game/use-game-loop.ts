@@ -364,8 +364,8 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
       if (ctx) {
         renderFrame({
           ctx,
-          w: canvas.width,
-          h: canvas.height,
+          width: canvas.width,
+          height: canvas.height,
           cookies: s.cookies,
           halves: s.halves,
           particles: s.particles,
