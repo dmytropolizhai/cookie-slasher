@@ -11,6 +11,11 @@ export function rand(min: number, max: number): number {
     return min + Math.random() * (max - min);
 }
 
+export function recycleParticle(p: Particle): void {
+    if (pool.length < 500) pool.push(p);
+}
+
+
 /**
  * Reusable particle objects
  */

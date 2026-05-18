@@ -10,10 +10,10 @@ import {
   makeNeonFragments,
   makeSakuraPetal,
   makeImpactSparks,
-  recycleParticle,
 } from './particles/particle-factory';
 import { renderFrame } from '@/core/rendering';
 import type { CookieEntity, CookieHalf, Vec2 } from '../types';
+import { recycleParticle } from './particles';
 
 let _entityId = 0;
 const uid = () => `e${++_entityId}`;

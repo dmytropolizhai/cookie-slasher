@@ -1,7 +1,6 @@
 import type { Particle, Vec2, CookieType } from '@/types';
-import { makeParticle } from './make-particle';
+import { makeParticle, recycleParticle } from './make-particle';
 import { COOKIE_COLORS, NEON_COLORS } from './colors';
-
 
 function rand(min: number, max: number): number {
   return min + Math.random() * (max - min);
