@@ -5,6 +5,7 @@ import { useGameLoop } from '@/core/use-game-loop';
 import { HUD } from './components/hud';
 import { MenuScreen } from './components/menu-screen';
 import { GameOverScreen } from './components/game-over-screen';
+import { PauseScreen } from './components/pause-screen';
 
 const LS_KEY = 'cookie_slash_hs';
 
@@ -19,7 +20,7 @@ function saveHighScore(score: number): void {
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { game } = useStore();
+  const { game, resumeGame, setPhase } = useStore();
   const { startGame } = useGameLoop(canvasRef);
   const [highScore, setHighScore] = useState(loadHighScore);
 
@@ -52,10 +53,17 @@ export default function App() {
     <div className="w-screen h-screen overflow-hidden relative"
       style={{ background: '#0A0010', cursor: game.phase === 'playing' ? 'none' : 'default' }}>
       <canvas ref={canvasRef} className="absolute inset-0" style={{ display: 'block' }} />
-      {game.phase === 'playing' && <HUD />}
+      {(game.phase === 'playing' || game.phase === 'paused') && <HUD />}
       <AnimatePresence mode="wait">
         {game.phase === 'menu' && <MenuScreen key="menu" onStart={startGame} highScore={highScore} />}
         {game.phase === 'gameover' && <GameOverScreen key="gameover" onRestart={startGame} highScore={highScore} />}
+        {game.phase === 'paused' && (
+          <PauseScreen
+            key="paused"
+            onResume={resumeGame}
+            onQuit={() => setPhase('menu')}
+          />
+        )}
       </AnimatePresence>
       {game.phase === 'playing' && <CustomCursor />}
     </div>

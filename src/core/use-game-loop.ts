@@ -127,6 +127,18 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     };
   }, [handleMouseMove, handleMouseDown, handleMouseUp]);
 
+  // ── ESC to pause / resume ──
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      const phase = storeRef.current.game.phase;
+      if (phase === 'playing') storeRef.current.pauseGame();
+      else if (phase === 'paused') storeRef.current.resumeGame();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
+
   // ── Main Loop ──
   const loop = useCallback((timestamp: number) => {
     const s = storeRef.current;

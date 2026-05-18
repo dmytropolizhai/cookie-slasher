@@ -16,6 +16,16 @@ export const useStore = create<Store>((set, get) => ({
   // Game
   setPhase: (phase) => set((s) => ({ game: { ...s.game, phase } })),
 
+  pauseGame: () =>
+    set((s) => ({
+      game: { ...s.game, phase: s.game.phase === 'playing' ? 'paused' : s.game.phase },
+    })),
+
+  resumeGame: () =>
+    set((s) => ({
+      game: { ...s.game, phase: s.game.phase === 'paused' ? 'playing' : s.game.phase },
+    })),
+
   addScore: (pts) =>
     set((s) => ({
       game: { ...s.game, score: s.game.score + Math.round(pts * s.combo.multiplier) },

@@ -12,6 +12,8 @@ export interface Store {
   // Game state
   game: GameState;
   setPhase: (phase: GamePhase) => void;
+  pauseGame: () => void;
+  resumeGame: () => void;
   addScore: (pts: number) => void;
   addReiki: (amount: number) => void;
   takeDamage: (dmg: number) => void;
