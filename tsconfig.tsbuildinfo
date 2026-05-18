@@ -1,1 +1,0 @@
-{"root":["./src/App.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/game-over-screen.tsx","./src/components/hud.tsx","./src/components/menu-screen.tsx","./src/game/use-game-loop.ts","./src/particles/particle-factory.ts","./src/rendering/renderer.ts","./src/store/index.ts","./src/systems/spawn-director.ts","./src/types/index.ts"],"version":"6.0.3"}
