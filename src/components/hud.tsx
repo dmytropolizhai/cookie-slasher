@@ -123,7 +123,7 @@ export function HUD() {
         </div>
       </div>
 
-      {/* ── HP Bar ── */}
+      {/* HP Bar */}
       <div className="absolute bottom-6 left-6 flex flex-col gap-2">
         <div
           style={{
