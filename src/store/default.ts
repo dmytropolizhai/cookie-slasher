@@ -1,5 +1,7 @@
 import { ComboState, GameState } from "@/types";
 
+export const defaultUpgrades: Record<string, number> = {};
+
 export const defaultGame: GameState = {
   phase: 'menu',
   score: 0,

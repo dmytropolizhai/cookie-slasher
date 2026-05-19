@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '../store';
+import { UPGRADES } from '../systems/shop';
 
 interface PauseScreenProps {
   onResume: () => void;
@@ -109,8 +110,10 @@ function GlitchTitle({ text }: { text: string }) {
 }
 
 export function PauseScreen({ onResume, onQuit }: PauseScreenProps) {
-  const { game } = useStore();
+  const { game, upgrades, openShop } = useStore();
   const injected = useRef(false);
+
+  const ownedCount = UPGRADES.filter((u) => (upgrades[u.id] ?? 0) > 0).length;
 
   useEffect(() => {
     if (!injected.current) {
@@ -207,6 +210,7 @@ export function PauseScreen({ onResume, onQuit }: PauseScreenProps) {
             primary
             onClick={onResume}
           />
+          <ShopButton reiki={game.reiki} ownedCount={ownedCount} onClick={openShop} />
           <PauseButton
             label="⏎  QUIT TO MENU"
             primary={false}
@@ -256,6 +260,38 @@ function StatPill({ label, value, color }: { label: string; value: string; color
         {value}
       </div>
     </div>
+  );
+}
+
+function ShopButton({ reiki, ownedCount, onClick }: { reiki: number; ownedCount: number; onClick: () => void }) {
+  return (
+    <motion.button
+      whileHover={{ scale: 1.04, boxShadow: '0 0 28px rgba(255,230,0,0.5)' }}
+      whileTap={{ scale: 0.96 }}
+      onClick={onClick}
+      style={{
+        fontFamily: '"Press Start 2P", monospace',
+        fontSize: 13,
+        color: '#FFE600',
+        background: 'transparent',
+        border: '2px solid rgba(255,230,0,0.4)',
+        boxShadow: 'none',
+        padding: '12px 0',
+        cursor: 'pointer',
+        letterSpacing: 2,
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 16,
+        transition: 'border-color 0.2s',
+      }}
+    >
+      ★  UPGRADE SHOP
+      <span style={{ fontSize: 8, color: '#FFE600', opacity: 0.7 }}>
+        ¥{reiki}{ownedCount > 0 ? `  ·  ${ownedCount} owned` : ''}
+      </span>
+    </motion.button>
   );
 }
 

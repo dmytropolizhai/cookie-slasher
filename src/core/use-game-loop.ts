@@ -87,6 +87,9 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
   const isSlashingRef = useRef(false);
   const sakuraTimerRef = useRef(0);
   const hitCookiesRef = useRef(new Set<string>());
+  const sliceCountRef = useRef(0);
+  const blastRuneUsedRef = useRef(false);
+  const chronoRecoveryRef = useRef(1.5);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     const canvas = canvasRef.current;
@@ -131,6 +134,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
+      if (storeRef.current.shopOpen) return;
       const phase = storeRef.current.game.phase;
       if (phase === 'playing') storeRef.current.pauseGame();
       else if (phase === 'paused') storeRef.current.resumeGame();
@@ -142,10 +146,12 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
   // ── Main Loop ──
   const loop = useCallback((timestamp: number) => {
     const s = storeRef.current;
-    if (s.game.phase !== 'playing') {
+    if (s.game.phase !== 'playing' || s.shopOpen) {
       rafRef.current = requestAnimationFrame(loop);
       return;
     }
+
+    const upg = (id: string) => s.upgrades[id] ?? 0;
 
     const rawDt = Math.min((timestamp - lastFrameRef.current) / 1000, 0.05);
     lastFrameRef.current = timestamp;
@@ -160,8 +166,9 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
 
     // Restore time scale
     if (s.game.timeScale < 1 && !s.game.criticalActive) {
-      s.setTimeScale(Math.min(1, s.game.timeScale + rawDt * 1.5));
+      s.setTimeScale(Math.min(1, s.game.timeScale + rawDt * chronoRecoveryRef.current));
     }
+    if (s.game.timeScale >= 1) chronoRecoveryRef.current = 1.5;
 
     // ── Flash decay ──
     flashAlphaRef.current = Math.max(0, flashAlphaRef.current - rawDt * 4);
@@ -182,16 +189,26 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
           if (cookie.state !== 'falling') return;
           if (hitCookiesRef.current.has(cookie.id)) return;
 
-          if (checkSlashHit(cookie.pos, cookie.radius, p0, p1)) {
+          // fortune_magnet: +8px to golden cookie effective radius
+          const hitRadius = cookie.type === 'golden'
+            ? cookie.radius + upg('fortune_magnet') * 8
+            : cookie.radius;
+
+          if (checkSlashHit(cookie.pos, hitRadius, p0, p1)) {
             hitCookiesRef.current.add(cookie.id);
 
             if (cookie.type === 'bomb') {
-              // BOMB
+              // BOMB — blast_rune negates the first hit per wave
               s.updateCookie(cookie.id, { state: 'exploded' });
-              s.takeDamage(1);
-              s.breakCombo();
-              s.triggerShake(8);
-              flashAlphaRef.current = 0.3;
+              if (upg('blast_rune') > 0 && !blastRuneUsedRef.current) {
+                blastRuneUsedRef.current = true;
+                flashAlphaRef.current = 0.15;
+              } else {
+                s.takeDamage(1);
+                s.breakCombo();
+                s.triggerShake(8);
+                flashAlphaRef.current = 0.3;
+              }
               makeExplosion(cookie.pos, 30).forEach(s.addParticle);
               makeNeonFragments(cookie.pos, 12).forEach(s.addParticle);
             } else if (cookie.type === 'fake') {
@@ -221,15 +238,27 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
               // NORMAL / GOLDEN
               s.updateCookie(cookie.id, { state: 'sliced' });
 
-              const isCritical = Math.random() < (velocity > 200 ? 0.25 : 0.08);
+              // crumb_accelerator: higher crit chance on fast slashes
+              const critFast = 0.25 + upg('crumb_accelerator') * 0.10;
+              const critSlow = 0.08 + upg('crumb_accelerator') * 0.08;
+              const isCritical = Math.random() < (velocity > 200 ? critFast : critSlow);
               const isGolden = cookie.type === 'golden';
 
               const baseScore = isGolden ? 150 : 50;
-              const scoreBonus = isCritical ? baseScore * 2 : baseScore;
+              // ghost_multiplier: 15% chance to double score
+              const ghostDouble = Math.random() < upg('ghost_multiplier') * 0.15 ? 2 : 1;
+              const scoreBonus = (isCritical ? baseScore * 2 : baseScore) * ghostDouble;
 
               s.addScore(scoreBonus);
               s.addReiki(isGolden ? 30 : 10);
               s.incrementCombo();
+
+              // spirit_overflow: +10 reiki per level every 10 slices
+              sliceCountRef.current++;
+              const overflowLevel = upg('spirit_overflow');
+              if (overflowLevel > 0 && sliceCountRef.current % 10 === 0) {
+                s.addReiki(10 * overflowLevel);
+              }
 
               // Particles
               makeCrumbs(cookie.pos, cookie.type, isGolden ? 18 : 12).forEach(s.addParticle);
@@ -238,8 +267,12 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
               makeImpactSparks(cookie.pos, 6).forEach(s.addParticle);
 
               if (isCritical) {
+                // chrono_slice: slow-mo recovery is 60% slower per level
+                const chronoRecovery = 1.5 / (1 + upg('chrono_slice') * 0.6);
                 s.triggerCritical();
                 s.setTimeScale(0.25);
+                // store the recovery rate override via a ref — handled below in restore block
+                chronoRecoveryRef.current = chronoRecovery;
                 s.triggerShake(6);
                 flashAlphaRef.current = 0.6;
                 makeCriticalBurst(cookie.pos, 25).forEach(s.addParticle);
@@ -368,6 +401,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     if (director.isWaveComplete() && s.cookies.filter((c) => c.state === 'falling').length === 0) {
       s.nextWave();
       director.reset(s.game.wave + 1);
+      blastRuneUsedRef.current = false;
     }
 
     // ── Render ──
@@ -408,6 +442,9 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     flashAlphaRef.current = 0;
     timeRef.current = 0;
     lastFrameRef.current = performance.now();
+    sliceCountRef.current = 0;
+    blastRuneUsedRef.current = false;
+    chronoRecoveryRef.current = 1.5;
   }, []);
 
   return { startGame };

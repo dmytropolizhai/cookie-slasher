@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 import { Store } from './types';
 import { calcRank, RANK_MULTIPLIERS } from './helpers';
-import { defaultCombo, defaultGame } from './default';
+import { defaultCombo, defaultGame, defaultUpgrades } from './default';
 
 
 export const useStore = create<Store>((set, get) => ({
@@ -12,6 +12,8 @@ export const useStore = create<Store>((set, get) => ({
   particles: [],
   slash: { points: [], active: false },
   combo: { ...defaultCombo },
+  upgrades: { ...defaultUpgrades },
+  shopOpen: false,
 
   // Game
   setPhase: (phase) => set((s) => ({ game: { ...s.game, phase } })),
@@ -33,6 +35,15 @@ export const useStore = create<Store>((set, get) => ({
 
   addReiki: (amount) =>
     set((s) => ({ game: { ...s.game, reiki: s.game.reiki + amount } })),
+
+  addMaxHp: (amount) =>
+    set((s) => ({
+      game: {
+        ...s.game,
+        maxHp: s.game.maxHp + amount,
+        hp: Math.min(s.game.hp + amount, s.game.maxHp + amount),
+      },
+    })),
 
   takeDamage: (dmg) =>
     set((s) => {
@@ -69,10 +80,26 @@ export const useStore = create<Store>((set, get) => ({
       particles: [],
       slash: { points: [], active: false },
       combo: { ...defaultCombo },
+      upgrades: { ...defaultUpgrades },
+      shopOpen: false,
     })),
 
   nextWave: () =>
     set((s) => ({ game: { ...s.game, wave: s.game.wave + 1 } })),
+
+  // Shop
+  openShop: () => set(() => ({ shopOpen: true })),
+  closeShop: () => set(() => ({ shopOpen: false })),
+
+  purchaseUpgrade: (id, price) =>
+    set((s) => {
+      if (s.game.reiki < price) return {};
+      const current = s.upgrades[id] ?? 0;
+      return {
+        game: { ...s.game, reiki: s.game.reiki - price },
+        upgrades: { ...s.upgrades, [id]: current + 1 },
+      };
+    }),
 
   // Cookies
   addCookie: (c) => set((s) => ({ cookies: [...s.cookies, c] })),
@@ -118,13 +145,14 @@ export const useStore = create<Store>((set, get) => ({
     set((s) => {
       const count = s.combo.count + 1;
       const rank = calcRank(count);
+      const phantomLevel = s.upgrades['phantom_thread'] ?? 0;
       return {
         combo: {
           count,
           rank,
           multiplier: RANK_MULTIPLIERS[rank],
           decayTimer: 0,
-          maxDecay: 3,
+          maxDecay: 3 + phantomLevel * 1.5,
           flash: true,
         },
       };

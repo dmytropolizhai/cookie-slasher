@@ -1,8 +1,8 @@
-import { 
-    ComboState, 
-    GamePhase, 
-    GameState, 
-    Particle, 
+import {
+    ComboState,
+    GamePhase,
+    GameState,
+    Particle,
     SlashTrail
 } from "@/types";
 
@@ -11,6 +11,7 @@ import { CookieEntity, CookieHalf } from "@/types/cookie";
 export interface Store {
   // Game state
   game: GameState;
+  addMaxHp: (amount: number) => void;
   setPhase: (phase: GamePhase) => void;
   pauseGame: () => void;
   resumeGame: () => void;
@@ -49,6 +50,13 @@ export interface Store {
   pushSlashPoint: (x: number, y: number, time: number) => void;
   setSlashActive: (active: boolean) => void;
   pruneSlash: (cutoffTime: number) => void;
+
+  // Shop
+  upgrades: Record<string, number>;
+  shopOpen: boolean;
+  openShop: () => void;
+  closeShop: () => void;
+  purchaseUpgrade: (id: string, price: number) => void;
 
   // Combo
   combo: ComboState;

@@ -35,7 +35,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
 }
 
 export function HUD() {
-  const { game, combo } = useStore();
+  const { game, combo, openShop } = useStore();
   const rankColor = RANK_COLORS[combo.rank] ?? '#888';
   const rankShadow = RANK_SHADOW[combo.rank] ?? '';
 
@@ -122,6 +122,11 @@ export function HUD() {
           </div>
         </div>
       </div>
+      
+      
+      <button className="absolute bottom-6 right-6" onClick={() => openShop()}>
+        Shop
+      </button>
 
       {/* HP Bar */}
       <div className="absolute bottom-6 left-6 flex flex-col gap-2">
