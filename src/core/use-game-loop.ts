@@ -248,7 +248,6 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     const canvas = canvasRef.current;
     const canvasH = canvas?.height ?? 600;
     const canvasW = canvas?.width ?? 800;
-    const toRemove: string[] = [];
 
     s.cookies.forEach((cookie) => {
       const step = stepCookie(cookie, dt, canvasH);
