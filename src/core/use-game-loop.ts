@@ -81,7 +81,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     };
   }, [handleMouseMove, handleMouseDown, handleMouseUp]);
 
-  // ── ESC to pause / resume ──
+  //  ESC to pause / resume 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
@@ -94,7 +94,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     return () => window.removeEventListener('keydown', handleKey);
   }, []);
 
-  // ── Main Loop ──
+  //  Main Loop 
   const loop = useCallback((timestamp: number) => {
     const s = storeRef.current;
     if (s.game.phase !== 'playing' || s.shopOpen) {
@@ -110,7 +110,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     timeRef.current += rawDt;
     const now = timestamp / 1000;
 
-    // ── Decay systems ──
+    //  Decay systems 
     s.tickCombo(dt);
     s.tickCritical(rawDt);
     s.decayShake();
@@ -121,10 +121,10 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     }
     if (s.game.timeScale >= 1) chronoRecoveryRef.current = 1.5;
 
-    // ── Flash decay ──
+    //  Flash decay 
     flashAlphaRef.current = Math.max(0, flashAlphaRef.current - rawDt * 4);
 
-    // ── Slash detection ──
+    //  Slash detection 
     const slashPoints = s.slash.points;
     s.pruneSlash(now - 0.18);
 
@@ -244,6 +244,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     }
 
     // ── Move cookies ──
+    const toRemove: string[] = [];
     const canvas = canvasRef.current;
     const canvasH = canvas?.height ?? 600;
     const canvasW = canvas?.width ?? 800;
@@ -263,14 +264,14 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     });
     toRemove.forEach(s.removeCookie);
 
-    // ── Move halves ──
+    //  Move halves 
     const halvesToRemove: string[] = [];
     s.halves.forEach((half) => {
       if (!stepHalf(half, dt, canvasH)) halvesToRemove.push(half.id);
     });
     halvesToRemove.forEach(s.removeHalf);
 
-    // ── Tick particles ──
+    //  Tick particles 
     const particlesToRemove: string[] = [];
     s.particles.forEach((p) => {
       if (!tickParticle(p, dt, timeRef.current)) {
@@ -280,14 +281,14 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     });
     particlesToRemove.forEach(s.removeParticle);
 
-    // ── Spawn sakura ──
+    //  Spawn sakura 
     sakuraTimerRef.current += rawDt;
     if (sakuraTimerRef.current > 0.3) {
       sakuraTimerRef.current = 0;
       s.addParticle(makeSakuraPetal(canvasW));
     }
 
-    // ── Spawn director ──
+    //  Spawn director 
     const director = directorRef.current;
     const cookieType = director.tick(rawDt);
     if (cookieType) {
@@ -300,7 +301,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
       blastRuneUsedRef.current = false;
     }
 
-    // ── Render ──
+    //  Render 
     if (canvas) {
       const ctx = canvas.getContext('2d');
       if (ctx) {
