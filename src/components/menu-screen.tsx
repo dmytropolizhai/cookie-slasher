@@ -3,9 +3,12 @@ import { motion } from 'framer-motion';
 interface MenuScreenProps {
   onStart: () => void;
   highScore: number;
+  currentStreak: number;
+  bestStreak: number;
+  soulDust: number;
 }
 
-export function MenuScreen({ onStart, highScore }: MenuScreenProps) {
+export function MenuScreen({ onStart, highScore, currentStreak, bestStreak, soulDust }: MenuScreenProps) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -48,6 +51,61 @@ export function MenuScreen({ onStart, highScore }: MenuScreenProps) {
           boxShadow: '0 0 20px #FF0080, 0 0 40px #9B00FF',
         }}
       />
+
+      {/* Streak panel top-right (F08) */}
+      {(currentStreak > 0 || bestStreak > 0) && (
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.8 }}
+          style={{
+            position: 'absolute',
+            top: 24,
+            right: 28,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: 6,
+          }}
+        >
+          <StreakBadge
+            label="STREAK"
+            value={currentStreak}
+            active={currentStreak > 0}
+            color="#FF0080"
+          />
+          <StreakBadge
+            label="BEST"
+            value={bestStreak}
+            active={false}
+            color="#9B00FF"
+          />
+        </motion.div>
+      )}
+
+      {/* Soul Dust total top-left (F01 display) */}
+      {soulDust > 0 && (
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.8 }}
+          style={{
+            position: 'absolute',
+            top: 24,
+            left: 28,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <span style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 10, color: '#AA88FF', textShadow: '0 0 8px #AA88FF' }}>
+            ✦
+          </span>
+          <span style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 9, color: '#AA88FF', textShadow: '0 0 8px #AA88FF' }}>
+            {soulDust} SOUL DUST
+          </span>
+        </motion.div>
+      )}
 
       {/* Japanese subtitle */}
       <motion.div
@@ -205,6 +263,50 @@ export function MenuScreen({ onStart, highScore }: MenuScreenProps) {
         >
           BEST: {highScore.toString().padStart(7, '0')}
         </motion.div>
+      )}
+    </motion.div>
+  );
+}
+
+interface StreakBadgeProps {
+  label: string;
+  value: number;
+  active: boolean;
+  color: string;
+}
+
+function StreakBadge({ label, value, active, color }: StreakBadgeProps) {
+  return (
+    <motion.div
+      animate={active && value >= 3 ? { scale: [1, 1.06, 1] } : {}}
+      transition={{ duration: 1.2, repeat: Infinity }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        background: active ? `${color}22` : 'transparent',
+        border: `1px solid ${active ? color : '#333'}`,
+        padding: '4px 10px',
+        boxShadow: active ? `0 0 12px ${color}66` : 'none',
+      }}
+    >
+      <span style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 7, color: active ? color : '#555' }}>
+        {label}
+      </span>
+      <span
+        style={{
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: active ? 14 : 10,
+          color: active ? color : '#444',
+          textShadow: active ? `0 0 10px ${color}` : 'none',
+          minWidth: 24,
+          textAlign: 'right',
+        }}
+      >
+        {value}
+      </span>
+      {active && value >= 3 && (
+        <span style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 8, color }}>🔥</span>
       )}
     </motion.div>
   );

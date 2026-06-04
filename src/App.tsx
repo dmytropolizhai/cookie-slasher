@@ -1,6 +1,7 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useStore } from './store';
+import { usePersistStore } from './store/persist-store';
 import { useGameLoop } from '@/core/use-game-loop';
 import { HUD } from './components/hud';
 import { MenuScreen } from './components/menu-screen';
@@ -8,22 +9,16 @@ import { GameOverScreen } from './components/game-over-screen';
 import { PauseScreen } from './components/pause-screen';
 import { ShopScreen } from './components/shop-screen';
 
-const LS_KEY = 'cookie_slash_hs';
-
-function loadHighScore(): number {
-  try { return parseInt(localStorage.getItem(LS_KEY) ?? '0', 10) || 0; }
-  catch { return 0; }
-}
-
-function saveHighScore(score: number): void {
-  try { localStorage.setItem(LS_KEY, String(score)); } catch { /* ignore */ }
-}
-
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { game, shopOpen, resumeGame, setPhase } = useStore();
   const { startGame } = useGameLoop(canvasRef);
-  const [highScore, setHighScore] = useState(loadHighScore);
+  const { soulDust, runHistory, currentStreak, bestStreak, recordRun } = usePersistStore();
+
+  // Derive high score from run history
+  const highScore = runHistory.length > 0
+    ? Math.max(...runHistory.map((r) => r.score))
+    : 0;
 
   useEffect(() => {
     const resize = () => {
@@ -37,12 +32,18 @@ export default function App() {
     return () => window.removeEventListener('resize', resize);
   }, []);
 
+  // Record run once on game-over transition
+  const recordedRef = useRef(false);
   useEffect(() => {
-    if (game.phase === 'gameover' && game.score > highScore) {
-      setHighScore(game.score);
-      saveHighScore(game.score);
+    if (game.phase === 'gameover') {
+      if (!recordedRef.current) {
+        recordedRef.current = true;
+        recordRun(game.score, game.wave);
+      }
+    } else {
+      recordedRef.current = false;
     }
-  }, [game.phase, game.score, highScore]);
+  }, [game.phase, game.score, game.wave, recordRun]);
 
   useEffect(() => {
     const prevent = (e: MouseEvent) => e.preventDefault();
@@ -56,8 +57,24 @@ export default function App() {
       <canvas ref={canvasRef} className="absolute inset-0" style={{ display: 'block' }} />
       {(game.phase === 'playing' || game.phase === 'paused') && <HUD />}
       <AnimatePresence mode="wait">
-        {game.phase === 'menu' && <MenuScreen key="menu" onStart={startGame} highScore={highScore} />}
-        {game.phase === 'gameover' && <GameOverScreen key="gameover" onRestart={startGame} highScore={highScore} />}
+        {game.phase === 'menu' && (
+          <MenuScreen
+            key="menu"
+            onStart={startGame}
+            highScore={highScore}
+            currentStreak={currentStreak}
+            bestStreak={bestStreak}
+            soulDust={soulDust}
+          />
+        )}
+        {game.phase === 'gameover' && (
+          <GameOverScreen
+            key="gameover"
+            onRestart={startGame}
+            highScore={highScore}
+            runHistory={runHistory.slice(0, 5)}
+          />
+        )}
         {game.phase === 'paused' && (
           <PauseScreen
             key="paused"
