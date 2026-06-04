@@ -1,9 +1,11 @@
 import { ComboState, GameState } from "@/types";
+import type { AchievementState } from "@/systems/achievements";
 
 export const defaultUpgrades: Record<string, number> = {};
 
 export const defaultGame: GameState = {
   phase: 'menu',
+  mode: 'endless',
   score: 0,
   reiki: 0,
   hp: 5,
@@ -13,6 +15,12 @@ export const defaultGame: GameState = {
   screenShake: 0,
   criticalActive: false,
   criticalTimer: 0,
+  dailyDate: null,
+  bossActive: false,
+  bossPhase: 1,
+  bossHp: 0,
+  bossMaxHp: 0,
+  bossIntroWave: 0,
 };
 
 export const defaultCombo: ComboState = {
@@ -22,4 +30,12 @@ export const defaultCombo: ComboState = {
   decayTimer: 0,
   maxDecay: 3,
   flash: false,
+};
+
+export const defaultAchievements: AchievementState[] = [];
+
+export const defaultStats = {
+  slicesTotal: 0,
+  goldenSliced: 0,
+  bombsBlocked: 0,
 };
