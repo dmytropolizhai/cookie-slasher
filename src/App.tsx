@@ -9,6 +9,8 @@ import { GameOverScreen } from './components/game-over-screen';
 import { PauseScreen } from './components/pause-screen';
 import { ShopScreen } from './components/shop-screen';
 import { DailyChallengeScreen } from './components/daily-challenge-screen';
+import { AchievementToastQueue } from './components/achievement-toast';
+import { AchievementsScreen } from './components/achievements-screen';
 
 const LS_KEY = 'cookie_slash_hs';
 
@@ -23,7 +25,7 @@ function saveHighScore(score: number): void {
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { game, shopOpen, resumeGame, setPhase, dailyRecord, saveDailyRecord } = useStore();
+  const { game, shopOpen, showAchievements, resumeGame, setPhase, dailyRecord, saveDailyRecord } = useStore();
   const { startGame } = useGameLoop(canvasRef);
   const [highScore, setHighScore] = useState(loadHighScore);
   const [showDaily, setShowDaily] = useState(false);
@@ -126,11 +128,26 @@ export default function App() {
             onQuit={handleMenu}
           />
         )}
+        {game.phase === 'boss_intro' && (
+          <BossIntroScreen
+            key={`boss-intro-${game.wave}`}
+            phase={getBossPhase(game.wave)}
+            wave={game.wave}
+            onComplete={() => {
+              markBossIntro(game.wave);
+              setPhase('playing');
+            }}
+          />
+        )}
       </AnimatePresence>
       {game.phase === 'playing' && <CustomCursor />}
       <AnimatePresence>
         {shopOpen && <ShopScreen key="shop" />}
       </AnimatePresence>
+      <AnimatePresence>
+        {showAchievements && <AchievementsScreen key="achievements" />}
+      </AnimatePresence>
+      <AchievementToastQueue />
     </div>
   );
 }

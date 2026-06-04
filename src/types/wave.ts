@@ -9,4 +9,5 @@ export interface WaveConfig {
   fakeChance: number;
   bombChance: number;
   hasBoss: boolean;
+  bossSpawnIndex?: number; // which spawn slot holds the boss (counts down to 0)
 }

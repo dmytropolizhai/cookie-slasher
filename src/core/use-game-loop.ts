@@ -21,6 +21,7 @@ import { checkSlashHit } from '@/systems/slash/hit-detection';
 import { spawnCookie } from '@/systems/cookies/factory';
 import { stepCookie } from '@/systems/cookies/movement';
 import { stepHalf } from '@/systems/halves';
+import { checkNewAchievements } from '@/systems/achievements';
 
 import type { CookieHalf, GameMode, Vec2 } from '@/types';
 
@@ -42,6 +43,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
   const sliceCountRef = useRef(0);
   const blastRuneUsedRef = useRef(false);
   const chronoRecoveryRef = useRef(1.5);
+  const sessionComboMaxRef = useRef(0);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     const canvas = canvasRef.current;
@@ -153,6 +155,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
             if (upg('blast_rune') > 0 && !blastRuneUsedRef.current) {
               blastRuneUsedRef.current = true;
               flashAlphaRef.current = 0.15;
+              s.recordBombBlocked();
             } else {
               s.takeDamage(1);
               s.breakCombo();
@@ -169,18 +172,23 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
             makeCrumbs(cookie.pos, 'fake', 8).forEach(s.addParticle);
           } else if (cookie.type === 'boss') {
             const newHp = cookie.hp - 1;
+            s.damageBoss(1);
             if (newHp <= 0) {
               s.updateCookie(cookie.id, { state: 'sliced', hp: 0 });
-              s.addScore(500);
-              s.addReiki(100);
+              s.endBoss();
+              // Score scales with phase
+              const phaseBonus = (cookie.phase || 1) * 250;
+              s.addScore(500 + phaseBonus);
+              s.addReiki(100 + (cookie.phase || 1) * 30);
               s.incrementCombo();
               makeCriticalBurst(cookie.pos, 30).forEach(s.addParticle);
               makeNeonFragments(cookie.pos, 20).forEach(s.addParticle);
               flashAlphaRef.current = 0.5;
             } else {
               s.updateCookie(cookie.id, { hp: newHp });
-              s.triggerShake(3);
+              s.triggerShake(3 + (cookie.phase || 1));
               makeImpactSparks(cookie.pos, 8).forEach(s.addParticle);
+              makeNeonFragments(cookie.pos, 4).forEach(s.addParticle);
             }
           } else {
             // NORMAL / GOLDEN
@@ -198,6 +206,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
             s.addScore(scoreBonus);
             s.addReiki(isGolden ? 30 : 10);
             s.incrementCombo();
+            s.recordSlice(cookie.type as 'normal' | 'golden');
 
             sliceCountRef.current++;
             const overflowLevel = upg('spirit_overflow');
@@ -288,20 +297,58 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
       s.addParticle(makeSakuraPetal(canvasW));
     }
 
-    //  Spawn director 
+    //  Spawn director
     const director = directorRef.current;
     const cookieType = director.tick(rawDt);
     if (cookieType) {
-      s.addCookie(spawnCookie(cookieType as import('../types').CookieType, canvasW, director.getSpeed()));
+      s.addCookie(spawnCookie(cookieType as import('../types').CookieType, canvasW, director.getSpeed(), s.game.wave));
+      // When boss is spawned, update the store with its phase data
+      if (cookieType === 'boss') {
+        const bossPhase = getBossPhase(s.game.wave);
+        const bossHp = getBossHpForPhase(bossPhase);
+        s.startBoss(bossPhase, bossHp);
+      }
     }
 
     if (director.isWaveComplete() && s.cookies.filter((c) => c.state === 'falling').length === 0) {
+      if (s.game.bossActive) s.endBoss();
       s.nextWave();
-      director.reset(s.game.wave + 1);
+      const nextWave = s.game.wave + 1;
+      director.reset(nextWave);
       blastRuneUsedRef.current = false;
+
+      // Trigger boss_intro for next boss wave
+      if (nextWave % 5 === 0 && s.game.bossIntroWave !== nextWave) {
+        s.setPhase('boss_intro');
+      }
     }
 
-    //  Render 
+    // ── Achievement checks ──
+    {
+      const comboNow = s.combo.count;
+      if (comboNow > sessionComboMaxRef.current) sessionComboMaxRef.current = comboNow;
+
+      const unlockedIds = new Set(s.achievements.map((a) => a.id));
+      const ctx = {
+        score: s.game.score,
+        wave: s.game.wave,
+        combo: sessionComboMaxRef.current,
+        slicesTotal: s.stats.slicesTotal,
+        goldenSliced: s.stats.goldenSliced,
+        bombsBlocked: s.stats.bombsBlocked,
+        perfectWaves: 0,
+        hp: s.game.hp,
+        maxHp: s.game.maxHp,
+        reiki: s.game.reiki,
+        upgradeCount: Object.values(s.upgrades).reduce((acc, v) => acc + v, 0),
+        criticals: 0,
+        phase: s.game.phase,
+      };
+      const newIds = checkNewAchievements(ctx, unlockedIds);
+      newIds.forEach((id) => s.unlockAchievement(id));
+    }
+
+    //  Render
     if (canvas) {
       const ctx = canvas.getContext('2d');
       if (ctx) {
@@ -350,6 +397,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     sliceCountRef.current = 0;
     blastRuneUsedRef.current = false;
     chronoRecoveryRef.current = 1.5;
+    sessionComboMaxRef.current = 0;
   }, []);
 
   return { startGame };

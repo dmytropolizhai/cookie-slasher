@@ -9,6 +9,7 @@ import {
 } from "@/types";
 
 import { CookieEntity, CookieHalf } from "@/types/cookie";
+import type { AchievementState } from "@/systems/achievements";
 
 export interface Store {
   // Game state
@@ -27,6 +28,10 @@ export interface Store {
   tickCritical: (dt: number) => void;
   resetGame: (mode?: GameMode, dailyDate?: string) => void;
   nextWave: () => void;
+  startBoss: (phase: 1 | 2 | 3, hp: number) => void;
+  damageBoss: (dmg: number) => void;
+  endBoss: () => void;
+  markBossIntro: (wave: number) => void;
 
   // Daily challenge
   dailyRecord: DailyChallengeRecord | null;
@@ -69,4 +74,22 @@ export interface Store {
   incrementCombo: () => void;
   breakCombo: (partial?: boolean) => void;
   tickCombo: (dt: number) => void;
+
+  // Achievements
+  achievements: AchievementState[];
+  achievementQueue: string[]; // ids waiting to display as toast
+  unlockAchievement: (id: string) => void;
+  dequeueAchievement: () => void;
+
+  // Persistent stats (survive resets)
+  stats: {
+    slicesTotal: number;
+    goldenSliced: number;
+    bombsBlocked: number;
+  };
+  recordSlice: (type: 'normal' | 'golden' | 'fake' | 'bomb' | 'boss') => void;
+  recordBombBlocked: () => void;
+  showAchievements: boolean;
+  openAchievements: () => void;
+  closeAchievements: () => void;
 }

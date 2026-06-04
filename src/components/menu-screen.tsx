@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import type { DailyChallengeRecord } from '@/types';
+import { useStore } from '../store';
 
 interface MenuScreenProps {
   onStart: () => void;
@@ -11,6 +12,7 @@ interface MenuScreenProps {
 
 export function MenuScreen({ onStart, onDailyChallenge, highScore, dailyRecord, todayDate }: MenuScreenProps) {
   const dailyPlayed = dailyRecord?.date === todayDate && dailyRecord.completed;
+  const { openAchievements } = useStore();
 
   return (
     <motion.div
@@ -240,6 +242,30 @@ export function MenuScreen({ onStart, onDailyChallenge, highScore, dailyRecord, 
           BEST: {highScore.toString().padStart(7, '0')}
         </motion.div>
       )}
+
+      {/* Achievements button */}
+      <motion.button
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.1 }}
+        whileHover={{ scale: 1.06, boxShadow: '0 0 20px rgba(155,0,255,0.5)' }}
+        whileTap={{ scale: 0.95 }}
+        onClick={openAchievements}
+        style={{
+          marginTop: 16,
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: 9,
+          color: '#9B00FF',
+          background: 'transparent',
+          border: '2px solid rgba(155,0,255,0.35)',
+          padding: '10px 28px',
+          cursor: 'pointer',
+          letterSpacing: 2,
+          textShadow: '0 0 8px #9B00FF',
+        }}
+      >
+        ★ ACHIEVEMENTS
+      </motion.button>
     </motion.div>
   );
 }
