@@ -9,6 +9,17 @@ const LS_DAILY_KEY = 'cookie_slash_daily';
 const LS_ACHIEVEMENTS = 'cookie_slash_achievements';
 const LS_STATS = 'cookie_slash_stats';
 
+function loadMuted(): boolean {
+  try { return localStorage.getItem('cookie_slash_muted') === '1'; }
+  catch { return false; }
+}
+
+function loadTutorialSeen(): boolean {
+  try { return localStorage.getItem('cookie_slash_tutorial_seen') === '1'; }
+  catch { return false; }
+}
+
+export const useStore = create<Store>((set, get) => ({
 function loadAchievements() {
   try {
     const raw = localStorage.getItem(LS_ACHIEVEMENTS);
@@ -51,6 +62,8 @@ export const useStore = create<Store>((set, _get) => ({
   combo: { ...defaultCombo },
   upgrades: { ...defaultUpgrades },
   shopOpen: false,
+  muted: loadMuted(),
+  tutorialSeen: loadTutorialSeen(),
   dailyRecord: loadDailyRecord(),
 
   // Achievements (persist)
@@ -256,6 +269,19 @@ export const useStore = create<Store>((set, _get) => ({
       return { combo: { ...s.combo, decayTimer, flash: false } };
     }),
 
+  // Audio
+  toggleMute: () =>
+    set((s) => {
+      const muted = !s.muted;
+      try { localStorage.setItem('cookie_slash_muted', muted ? '1' : '0'); } catch { /* ignore */ }
+      return { muted };
+    }),
+
+  // Tutorial
+  setTutorialSeen: () => {
+    try { localStorage.setItem('cookie_slash_tutorial_seen', '1'); } catch { /* ignore */ }
+    set(() => ({ tutorialSeen: true }));
+  },
   // Achievements
   unlockAchievement: (id) =>
     set((s) => {

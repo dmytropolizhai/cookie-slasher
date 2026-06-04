@@ -8,6 +8,7 @@ import { MenuScreen } from './components/menu-screen';
 import { GameOverScreen } from './components/game-over-screen';
 import { PauseScreen } from './components/pause-screen';
 import { ShopScreen } from './components/shop-screen';
+import { TutorialOverlay } from './components/tutorial-overlay';
 import { DailyChallengeScreen } from './components/daily-challenge-screen';
 import { AchievementToastQueue } from './components/achievement-toast';
 import { AchievementsScreen } from './components/achievements-screen';
@@ -25,7 +26,7 @@ function saveHighScore(score: number): void {
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { game, shopOpen, showAchievements, resumeGame, setPhase, dailyRecord, saveDailyRecord } = useStore();
+  const { game, shopOpen, showAchievements, resumeGame, setPhase, dailyRecord, saveDailyRecord, tutorialSeen } = useStore();
   const { startGame } = useGameLoop(canvasRef);
   const [highScore, setHighScore] = useState(loadHighScore);
   const [showDaily, setShowDaily] = useState(false);
@@ -73,6 +74,17 @@ export default function App() {
     return () => window.removeEventListener('contextmenu', prevent);
   }, []);
 
+  function handleStart() {
+    startGame();
+    // Show pre-game tutorial modal for first-time players
+    if (!tutorialSeen) {
+      setShowTutorial(true);
+    }
+  }
+
+  function handleTutorialDone() {
+    setShowTutorial(false);
+  }
   const handleStartEndless = useCallback(() => {
     startGame('endless');
   }, [startGame]);
@@ -90,10 +102,12 @@ export default function App() {
 
   return (
     <div className="w-screen h-screen overflow-hidden relative"
-      style={{ background: '#0A0010', cursor: game.phase === 'playing' ? 'none' : 'default' }}>
+      style={{ background: '#0A0010', cursor: game.phase === 'playing' && !showTutorial ? 'none' : 'default' }}>
       <canvas ref={canvasRef} className="absolute inset-0" style={{ display: 'block' }} />
       {(game.phase === 'playing' || game.phase === 'paused') && <HUD />}
       <AnimatePresence mode="wait">
+        {game.phase === 'menu' && <MenuScreen key="menu" onStart={handleStart} highScore={highScore} />}
+        {game.phase === 'gameover' && <GameOverScreen key="gameover" onRestart={handleStart} highScore={highScore} />}
         {game.phase === 'menu' && !showDaily && (
           <MenuScreen
             key="menu"
@@ -140,11 +154,15 @@ export default function App() {
           />
         )}
       </AnimatePresence>
-      {game.phase === 'playing' && <CustomCursor />}
+      {game.phase === 'playing' && !showTutorial && <CustomCursor />}
       <AnimatePresence>
         {shopOpen && <ShopScreen key="shop" />}
       </AnimatePresence>
       <AnimatePresence>
+        {showTutorial && game.phase === 'playing' && (
+          <TutorialOverlay key="tutorial" onDone={handleTutorialDone} />
+        )}
+      </AnimatePresence>
         {showAchievements && <AchievementsScreen key="achievements" />}
       </AnimatePresence>
       <AchievementToastQueue />

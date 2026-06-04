@@ -126,9 +126,28 @@ export function HUD() {
       </div>
       
       
-      <button className="absolute bottom-6 right-6" onClick={() => openShop()}>
-        Shop
-      </button>
+      {/* Shop button — bottom-right */}
+      <motion.button
+        className="absolute"
+        style={{
+          bottom: 24,
+          right: 24,
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: 9,
+          color: '#FFE600',
+          background: 'transparent',
+          border: '2px solid rgba(255,230,0,0.4)',
+          padding: '8px 16px',
+          cursor: 'pointer',
+          letterSpacing: 2,
+          pointerEvents: 'auto',
+        }}
+        whileHover={{ borderColor: '#FFE600', boxShadow: '0 0 16px rgba(255,230,0,0.5)' }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => openShop()}
+      >
+        ★ SHOP
+      </motion.button>
 
       {/* Boss HP Bar */}
       <AnimatePresence>
@@ -228,10 +247,11 @@ export function HUD() {
         {combo.count >= 2 && (
           <motion.div
             key="combo"
-            initial={{ x: -80, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: -80, opacity: 0 }}
-            className="absolute bottom-6 right-6 flex flex-col items-end gap-1"
+            initial={{ y: 40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 40, opacity: 0 }}
+            className="absolute flex flex-col items-center gap-1"
+            style={{ bottom: 24, left: '50%', transform: 'translateX(-50%)' }}
           >
             {/* Rank badge */}
             <motion.div
@@ -261,6 +281,7 @@ export function HUD() {
                 fontSize: 14,
                 color: '#FFFFFF',
                 textShadow: `0 0 10px ${rankColor}`,
+                textAlign: 'center',
               }}
             >
               {combo.count} HIT
@@ -274,6 +295,7 @@ export function HUD() {
                   fontSize: 9,
                   color: rankColor,
                   opacity: 0.8,
+                  textAlign: 'center',
                 }}
               >
                 ×{combo.multiplier} BONUS

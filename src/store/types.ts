@@ -75,6 +75,13 @@ export interface Store {
   breakCombo: (partial?: boolean) => void;
   tickCombo: (dt: number) => void;
 
+  // Audio
+  muted: boolean;
+  toggleMute: () => void;
+
+  // Tutorial
+  tutorialSeen: boolean;
+  setTutorialSeen: () => void;
   // Achievements
   achievements: AchievementState[];
   achievementQueue: string[]; // ids waiting to display as toast
