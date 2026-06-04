@@ -36,7 +36,14 @@ export function makeCrumbs(pos: Vec2, cookieType: CookieType, count = 12): Parti
  * @param count - Number of particles to create
  */
 export function makeGoo(pos: Vec2, cookieType: CookieType, count = 8): Particle[] {
-  const gooColor = cookieType === 'golden' ? '#FFD700' : cookieType === 'fake' ? '#4A4A00' : '#D4622A';
+  const gooColor =
+    cookieType === 'golden' ? '#FFD700' :
+    cookieType === 'fake' ? '#4A4A00' :
+    cookieType === 'frozen' ? '#00AAFF' :
+    cookieType === 'cursed' ? '#8800CC' :
+    cookieType === 'mirror' ? '#88CCFF' :
+    cookieType === 'spirit' ? '#00FFAA' :
+    '#D4622A';
   return Array.from({ length: count }, () => {
     const angle = rand(0, Math.PI * 2);
     const speed = rand(40, 140);
@@ -175,6 +182,90 @@ export function makeNeonFragments(pos: Vec2, count = 8): Particle[] {
       NEON_COLORS[Math.floor(Math.random() * NEON_COLORS.length)],
       rand(0.3, 0.8),
       { gravity: 60, shrink: 0.5 }
+    );
+  });
+}
+
+/**
+ * Ice shard burst for frozen cookie
+ * @param pos - Position of the cookie
+ * @param count - Number of particles to create
+ */
+export function makeIceShards(pos: Vec2, count = 14): Particle[] {
+  return Array.from({ length: count }, () => {
+    const angle = rand(0, Math.PI * 2);
+    const speed = rand(80, 280);
+    return makeParticle(
+      'crumb',
+      pos,
+      { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed - rand(20, 80) },
+      rand(4, 10),
+      `hsl(${rand(190, 220)}, 100%, ${rand(70, 90)}%)`,
+      rand(0.5, 1.2),
+      { gravity: 300, shrink: 0.7 }
+    );
+  });
+}
+
+/**
+ * Cursed dark cloud burst
+ * @param pos - Position of the cookie
+ * @param count - Number of particles to create
+ */
+export function makeCursedBurst(pos: Vec2, count = 14): Particle[] {
+  return Array.from({ length: count }, () => {
+    const angle = rand(0, Math.PI * 2);
+    const speed = rand(60, 220);
+    return makeParticle(
+      'neon',
+      pos,
+      { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed - rand(10, 60) },
+      rand(5, 14),
+      `hsl(${rand(270, 310)}, 100%, ${rand(40, 70)}%)`,
+      rand(0.4, 1.0),
+      { gravity: 120, shrink: 0.5 }
+    );
+  });
+}
+
+/**
+ * Mirror shatter — chrome sparks flying outward
+ * @param pos - Position of the cookie
+ * @param count - Number of particles to create
+ */
+export function makeMirrorShatter(pos: Vec2, count = 16): Particle[] {
+  return Array.from({ length: count }, () => {
+    const angle = rand(0, Math.PI * 2);
+    const speed = rand(100, 350);
+    return makeParticle(
+      'spark',
+      pos,
+      { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed - rand(30, 100) },
+      rand(3, 8),
+      `hsl(${rand(200, 240)}, 60%, ${rand(80, 100)}%)`,
+      rand(0.3, 0.7),
+      { gravity: 200, shrink: 0.9 }
+    );
+  });
+}
+
+/**
+ * Spirit dissolve — ethereal wisps fading upward
+ * @param pos - Position of the cookie
+ * @param count - Number of particles to create
+ */
+export function makeSpiritDissolve(pos: Vec2, count = 14): Particle[] {
+  return Array.from({ length: count }, () => {
+    const angle = rand(-Math.PI, 0); // mostly upward
+    const speed = rand(40, 160);
+    return makeParticle(
+      'neon',
+      pos,
+      { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed - rand(20, 80) },
+      rand(4, 12),
+      `hsl(${rand(150, 175)}, 100%, ${rand(65, 85)}%)`,
+      rand(0.4, 1.0),
+      { gravity: -30, shrink: 0.4 }
     );
   });
 }

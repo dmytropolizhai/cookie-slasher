@@ -8,6 +8,10 @@ export interface WaveConfig {
   goldenChance: number;
   fakeChance: number;
   bombChance: number;
+  frozenChance: number;
+  cursedChance: number;
+  mirrorChance: number;
+  spiritChance: number;
   hasBoss: boolean;
   bossSpawnIndex?: number; // which spawn slot holds the boss (counts down to 0)
 }

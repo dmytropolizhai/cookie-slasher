@@ -2,6 +2,26 @@ import type { CookieEntity, CookieType } from '@/types';
 import { uid } from '@/core/math';
 import { getBossHpForPhase, getBossPhase, BOSS_PHASES } from '@/systems/boss/data';
 
+function radiusForType(type: CookieType): number {
+  if (type === 'boss') return 55;
+  if (type === 'golden') return 34;
+  if (type === 'mirror') return 30;
+  return 28;
+}
+
+function glowForType(type: CookieType): number {
+  if (type === 'golden' || type === 'boss') return 1;
+  if (type === 'frozen') return 0.7;
+  if (type === 'cursed') return 0.8;
+  if (type === 'spirit') return 0.6;
+  return 0;
+}
+
+export function spawnCookie(type: CookieType, canvasWidth: number, speed: number): CookieEntity {
+  const x = 60 + Math.random() * (canvasWidth - 120);
+  const isBoss = type === 'boss';
+  // frozen cookies fall a bit slower; cursed slightly faster
+  const speedMod = type === 'frozen' ? 0.75 : type === 'cursed' ? 1.15 : 1;
 export function spawnCookie(type: CookieType, canvasWidth: number, speed: number, wave = 1): CookieEntity {
   const x = 60 + Math.random() * (canvasWidth - 120);
   const isBoss = type === 'boss';
@@ -16,8 +36,8 @@ export function spawnCookie(type: CookieType, canvasWidth: number, speed: number
     id: uid(),
     type,
     pos: { x, y: -40 },
-    vel: { x: (Math.random() - 0.5) * 60, y: bossSpeed },
-    radius,
+    vel: { x: (Math.random() - 0.5) * 60, y: speed * speedMod },
+    radius: radiusForType(type),
     rotation: Math.random() * Math.PI * 2,
     rotationSpeed: (Math.random() - 0.5) * 3,
     state: 'falling',
@@ -26,6 +46,6 @@ export function spawnCookie(type: CookieType, canvasWidth: number, speed: number
     phase: isBoss ? bossPhase : 0,
     spawnTime: performance.now() / 1000,
     scale: 1,
-    glowIntensity: type === 'golden' || type === 'boss' ? 1 : 0,
+    glowIntensity: glowForType(type),
   };
 }

@@ -17,5 +17,17 @@ export function pickCookieType(config: WaveConfig, rng: () => number): CookieTyp
   acc += config.fakeChance;
   if (r < acc) return 'fake';
 
+  acc += config.frozenChance;
+  if (r < acc) return 'frozen';
+
+  acc += config.cursedChance;
+  if (r < acc) return 'cursed';
+
+  acc += config.mirrorChance;
+  if (r < acc) return 'mirror';
+
+  acc += config.spiritChance;
+  if (r < acc) return 'spirit';
+
   return 'normal';
 }

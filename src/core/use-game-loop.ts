@@ -10,6 +10,10 @@ import {
   makeNeonFragments,
   makeSakuraPetal,
   makeImpactSparks,
+  makeIceShards,
+  makeCursedBurst,
+  makeMirrorShatter,
+  makeSpiritDissolve,
 } from '@/core/particles/particle-factory';
 import { renderFrame } from '@/core/rendering';
 import { uid, resetEntityId, distance } from '@/core/math';
@@ -189,6 +193,75 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
               s.triggerShake(3 + (cookie.phase || 1));
               makeImpactSparks(cookie.pos, 8).forEach(s.addParticle);
               makeNeonFragments(cookie.pos, 4).forEach(s.addParticle);
+            }
+          } else if (cookie.type === 'frozen') {
+            // Frozen: slice it, slow time, bonus score
+            s.updateCookie(cookie.id, { state: 'sliced' });
+            s.addScore(80);
+            s.addReiki(15);
+            s.incrementCombo();
+            s.setTimeScale(0.3);
+            s.triggerShake(3);
+            flashAlphaRef.current = 0.25;
+            makeIceShards(cookie.pos, 16).forEach(s.addParticle);
+            makeSlashParticles(cookie.pos, angle, 6).forEach(s.addParticle);
+            const fhalf1: CookieHalf = {
+              id: uid(), pos: { ...cookie.pos },
+              vel: { x: Math.cos(angle - Math.PI / 2) * 80 - 20, y: -120 + Math.sin(angle) * 40 },
+              rotation: cookie.rotation, rotationSpeed: cookie.rotationSpeed + 2,
+              alpha: 1, half: 'top', cookieType: 'frozen', slashAngle: angle,
+            };
+            const fhalf2: CookieHalf = {
+              id: uid(), pos: { ...cookie.pos },
+              vel: { x: Math.cos(angle + Math.PI / 2) * 80 + 20, y: -80 + Math.sin(angle) * 40 },
+              rotation: cookie.rotation, rotationSpeed: cookie.rotationSpeed - 2,
+              alpha: 1, half: 'bottom', cookieType: 'frozen', slashAngle: angle,
+            };
+            s.addHalf(fhalf1);
+            s.addHalf(fhalf2);
+          } else if (cookie.type === 'cursed') {
+            // Cursed: slicing it costs HP and breaks combo
+            s.updateCookie(cookie.id, { state: 'sliced' });
+            s.takeDamage(1);
+            s.breakCombo();
+            s.triggerShake(7);
+            flashAlphaRef.current = 0.35;
+            makeCursedBurst(cookie.pos, 16).forEach(s.addParticle);
+            makeNeonFragments(cookie.pos, 8).forEach(s.addParticle);
+          } else if (cookie.type === 'mirror') {
+            // Mirror: slicing spawns two normal cookies flying from the impact point
+            s.updateCookie(cookie.id, { state: 'sliced' });
+            s.addScore(30);
+            s.addReiki(5);
+            s.incrementCombo();
+            makeMirrorShatter(cookie.pos, 18).forEach(s.addParticle);
+            makeSlashParticles(cookie.pos, angle, 8).forEach(s.addParticle);
+            // Spawn two normal cookies at cookie pos flying apart diagonally
+            const mirrorFragment1 = { ...spawnCookie('normal', canvasW, 120) };
+            mirrorFragment1.pos = { ...cookie.pos };
+            mirrorFragment1.vel = { x: -100 - Math.random() * 60, y: -80 - Math.random() * 40 };
+            const mirrorFragment2 = { ...spawnCookie('normal', canvasW, 120) };
+            mirrorFragment2.pos = { ...cookie.pos };
+            mirrorFragment2.vel = { x: 100 + Math.random() * 60, y: -80 - Math.random() * 40 };
+            s.addCookie(mirrorFragment1);
+            s.addCookie(mirrorFragment2);
+          } else if (cookie.type === 'spirit') {
+            // Spirit: can only be sliced when visible enough (phase > 0.5)
+            const t = performance.now() / 1000;
+            const spiritPhase = (t - cookie.spawnTime) * 1.8;
+            const visibility = 0.35 + 0.55 * (0.5 + 0.5 * Math.sin(spiritPhase));
+            if (visibility < 0.55) {
+              // Cookie is too transparent — slash passes through
+              hitCookiesRef.current.delete(cookie.id);
+            } else {
+              s.updateCookie(cookie.id, { state: 'sliced' });
+              s.addScore(200);
+              s.addReiki(50);
+              s.incrementCombo();
+              s.triggerShake(2);
+              flashAlphaRef.current = 0.2;
+              makeSpiritDissolve(cookie.pos, 16).forEach(s.addParticle);
+              makeSlashParticles(cookie.pos, angle, 6).forEach(s.addParticle);
             }
           } else {
             // NORMAL / GOLDEN
