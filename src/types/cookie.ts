@@ -1,6 +1,6 @@
 import type { Vec2 } from "./geometry";
 
-export type CookieType = 'normal' | 'golden' | 'fake' | 'bomb' | 'boss';
+export type CookieType = 'normal' | 'golden' | 'fake' | 'bomb' | 'boss' | 'frozen' | 'cursed' | 'mirror' | 'spirit';
 
 export type CookieState = 'falling' | 'sliced' | 'exploded' | 'missed';
 

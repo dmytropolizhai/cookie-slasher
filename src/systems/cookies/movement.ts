@@ -14,7 +14,10 @@ export function stepCookie(cookie: CookieEntity, dt: number, canvasHeight: numbe
   };
 
   if (newPos.y > canvasHeight + 60) {
-    if (cookie.type !== 'bomb' && cookie.type !== 'fake') return { action: 'missed' };
+    // bomb, fake, cursed, spirit vanish silently without a miss penalty
+    const noMiss = cookie.type === 'bomb' || cookie.type === 'fake'
+      || cookie.type === 'cursed' || cookie.type === 'spirit';
+    if (!noMiss) return { action: 'missed' };
     return { action: 'remove' };
   }
 

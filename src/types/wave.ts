@@ -8,5 +8,9 @@ export interface WaveConfig {
   goldenChance: number;
   fakeChance: number;
   bombChance: number;
+  frozenChance: number;
+  cursedChance: number;
+  mirrorChance: number;
+  spiritChance: number;
   hasBoss: boolean;
 }

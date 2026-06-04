@@ -6,6 +6,10 @@ export const COOKIE_COLORS: Record<CookieType, string[]> = {
     fake: ['#8B4513', '#666', '#333', '#A0522D'],
     bomb: ['#FF4444', '#FF0000', '#FF6600', '#333'],
     boss: ['#9B00FF', '#FF0080', '#00FFFF', '#FFD700'],
+    frozen: ['#88CCFF', '#00AAFF', '#CCEEFF', '#AADDFF'],
+    cursed: ['#330033', '#8800CC', '#FF00FF', '#220022'],
+    mirror: ['#AACCFF', '#DDEEFF', '#88AACC', '#FFFFFF'],
+    spirit: ['#00FFAA', '#88FFCC', '#00CC88', '#CCFFEE'],
 };
 
 export const NEON_COLORS: string[] = ['#FF0080', '#00FFFF', '#FFE600', '#9B00FF', '#00FF88'];
