@@ -495,7 +495,7 @@ export function drawCookie(
     case 'bomb': drawBombBody(ctx, r); break;
     case 'fake': drawFakeBody(ctx, r); break;
     case 'golden': drawGoldenBody(ctx, r); break;
-    case 'boss': drawBossBody(ctx, r, hp, maxHp); break;
+
     case 'frozen': drawFrozenBody(ctx, r); break;
     case 'cursed': drawCursedBody(ctx, r); break;
     case 'mirror': drawMirrorBody(ctx, r); break;

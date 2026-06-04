@@ -12,6 +12,8 @@ import { TutorialOverlay } from './components/tutorial-overlay';
 import { DailyChallengeScreen } from './components/daily-challenge-screen';
 import { AchievementToastQueue } from './components/achievement-toast';
 import { AchievementsScreen } from './components/achievements-screen';
+import { BossIntroScreen } from './components/boss-intro-screen';
+import { getBossPhase } from '@/systems/boss/data';
 
 const LS_KEY = 'cookie_slash_hs';
 
@@ -26,10 +28,11 @@ function saveHighScore(score: number): void {
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { game, shopOpen, showAchievements, resumeGame, setPhase, dailyRecord, saveDailyRecord, tutorialSeen } = useStore();
+  const { game, shopOpen, showAchievements, resumeGame, setPhase, dailyRecord, saveDailyRecord, tutorialSeen, markBossIntro } = useStore();
   const { startGame } = useGameLoop(canvasRef);
   const [highScore, setHighScore] = useState(loadHighScore);
   const [showDaily, setShowDaily] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   const todayDate = formatDailyDate();
 
@@ -106,8 +109,7 @@ export default function App() {
       <canvas ref={canvasRef} className="absolute inset-0" style={{ display: 'block' }} />
       {(game.phase === 'playing' || game.phase === 'paused') && <HUD />}
       <AnimatePresence mode="wait">
-        {game.phase === 'menu' && <MenuScreen key="menu" onStart={handleStart} highScore={highScore} />}
-        {game.phase === 'gameover' && <GameOverScreen key="gameover" onRestart={handleStart} highScore={highScore} />}
+
         {game.phase === 'menu' && !showDaily && (
           <MenuScreen
             key="menu"
@@ -163,6 +165,7 @@ export default function App() {
           <TutorialOverlay key="tutorial" onDone={handleTutorialDone} />
         )}
       </AnimatePresence>
+      <AnimatePresence>
         {showAchievements && <AchievementsScreen key="achievements" />}
       </AnimatePresence>
       <AchievementToastQueue />

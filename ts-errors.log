@@ -1,0 +1,7 @@
+src/App.tsx(112,36): error TS2739: Type '{ key: string; onStart: () => void; highScore: number; }' is missing the following properties from type 'MenuScreenProps': onDailyChallenge, dailyRecord, todayDate
+src/App.tsx(113,40): error TS2741: Property 'onMenu' is missing in type '{ key: string; onRestart: () => void; highScore: number; }' but required in type 'GameOverScreenProps'.
+src/core/rendering/draw-cookie.ts(498,18): error TS2554: Expected 5 arguments, but got 4.
+src/core/use-game-loop.ts(380,27): error TS2552: Cannot find name 'getBossPhase'. Did you mean 'bossPhase'?
+src/core/use-game-loop.ts(381,24): error TS2304: Cannot find name 'getBossHpForPhase'.
+src/core/use-game-loop.ts(455,38): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'.

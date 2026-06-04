@@ -17,6 +17,13 @@ export interface GameState {
 
   /** ISO date string YYYY-MM-DD for which the daily challenge was played */
   dailyDate: string | null;
+
+  // Boss fight state
+  bossActive: boolean;
+  bossPhase: 1 | 2 | 3;
+  bossHp: number;
+  bossMaxHp: number;
+  bossIntroWave: number;
 }
 
 /** Persisted record of a completed daily challenge attempt */
@@ -25,10 +32,4 @@ export interface DailyChallengeRecord {
   score: number;
   wave: number;
   completed: boolean;    // true once submitted (prevent replaying same day)
-  // Boss fight state
-  bossActive: boolean;
-  bossPhase: 1 | 2 | 3;
-  bossHp: number;
-  bossMaxHp: number;
-  bossIntroWave: number;  // wave that triggered boss_intro (avoid re-showing)
 }

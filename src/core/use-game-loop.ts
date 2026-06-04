@@ -23,6 +23,7 @@ import { makeSeededRng } from '@/core/seeded-rng';
 import { SpawnDirector } from '@/systems/spawn-director';
 import { checkSlashHit } from '@/systems/slash/hit-detection';
 import { spawnCookie } from '@/systems/cookies/factory';
+import { getBossPhase, getBossHpForPhase } from '@/systems/boss/data';
 import { stepCookie } from '@/systems/cookies/movement';
 import { stepHalf } from '@/systems/halves';
 import { checkNewAchievements } from '@/systems/achievements';

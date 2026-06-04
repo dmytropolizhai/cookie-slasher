@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
-import type { Store, DailyChallengeRecord, GameMode } from './types';
+import type { Store } from './types';
+import type { DailyChallengeRecord, GameMode } from '@/types';
 import { calcRank, RANK_MULTIPLIERS } from './helpers';
 import { defaultCombo, defaultGame, defaultUpgrades, defaultAchievements, defaultStats } from './default';
 
@@ -19,7 +20,6 @@ function loadTutorialSeen(): boolean {
   catch { return false; }
 }
 
-export const useStore = create<Store>((set, get) => ({
 function loadAchievements() {
   try {
     const raw = localStorage.getItem(LS_ACHIEVEMENTS);

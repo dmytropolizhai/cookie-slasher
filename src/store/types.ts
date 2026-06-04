@@ -26,7 +26,7 @@ export interface Store {
   decayShake: () => void;
   triggerCritical: () => void;
   tickCritical: (dt: number) => void;
-  resetGame: (mode?: GameMode, dailyDate?: string) => void;
+  resetGame: (mode?: GameMode, dailyDate?: string | null) => void;
   nextWave: () => void;
   startBoss: (phase: 1 | 2 | 3, hp: number) => void;
   damageBoss: (dmg: number) => void;
