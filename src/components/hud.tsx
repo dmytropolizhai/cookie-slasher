@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
+import { getActiveSynergies } from '../systems/synergies';
 
 const RANK_COLORS: Record<string, string> = {
   D: '#888888',
@@ -35,9 +36,10 @@ function HeartIcon({ filled }: { filled: boolean }) {
 }
 
 export function HUD() {
-  const { game, combo, openShop } = useStore();
+  const { game, combo, upgrades, openShop } = useStore();
   const rankColor = RANK_COLORS[combo.rank] ?? '#888';
   const rankShadow = RANK_SHADOW[combo.rank] ?? '';
+  const activeSynergies = getActiveSynergies(upgrades);
 
   return (
     <div className="absolute inset-0 pointer-events-none select-none">
@@ -122,8 +124,60 @@ export function HUD() {
           </div>
         </div>
       </div>
-      
-      
+
+      {/* ── Active Synergies Strip ── */}
+      <AnimatePresence>
+        {activeSynergies.length > 0 && (
+          <motion.div
+            key="synergies"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute top-20 left-1/2 -translate-x-1/2"
+            style={{ display: 'flex', gap: 8, alignItems: 'center' }}
+          >
+            {activeSynergies.map((syn) => (
+              <motion.div
+                key={syn.id}
+                animate={{ opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 2.5, repeat: Infinity, delay: Math.random() * 1.5 }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 5,
+                  padding: '4px 10px',
+                  border: `1px solid ${syn.color}55`,
+                  background: `${syn.color}0D`,
+                  boxShadow: `0 0 8px ${syn.color}22`,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: '"Press Start 2P", monospace',
+                    fontSize: 8,
+                    color: syn.color,
+                    textShadow: `0 0 6px ${syn.color}`,
+                  }}
+                >
+                  {syn.icon}
+                </span>
+                <span
+                  style={{
+                    fontFamily: '"Press Start 2P", monospace',
+                    fontSize: 5,
+                    color: syn.color,
+                    letterSpacing: 1,
+                    opacity: 0.9,
+                  }}
+                >
+                  {syn.nameJP}
+                </span>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <button className="absolute bottom-6 right-6" onClick={() => openShop()}>
         Shop
       </button>

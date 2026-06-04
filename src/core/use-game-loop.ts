@@ -20,6 +20,7 @@ import { checkSlashHit } from '@/systems/slash/hit-detection';
 import { spawnCookie } from '@/systems/cookies/factory';
 import { stepCookie } from '@/systems/cookies/movement';
 import { stepHalf } from '@/systems/halves';
+import { getActiveSynergyIds } from '@/systems/synergies';
 
 import type { CookieHalf, Vec2 } from '@/types';
 
@@ -41,6 +42,8 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
   const sliceCountRef = useRef(0);
   const blastRuneUsedRef = useRef(false);
   const chronoRecoveryRef = useRef(1.5);
+  // Synergy: blast_surge — guaranteed crits after blast rune absorbs explosion
+  const blastSurgeCritsRef = useRef(0);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     const canvas = canvasRef.current;
@@ -103,6 +106,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     }
 
     const upg = (id: string) => s.upgrades[id] ?? 0;
+    const syns = getActiveSynergyIds(s.upgrades);
 
     const rawDt = Math.min((timestamp - lastFrameRef.current) / 1000, 0.05);
     lastFrameRef.current = timestamp;
@@ -110,8 +114,10 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     timeRef.current += rawDt;
     const now = timestamp / 1000;
 
-    //  Decay systems 
-    s.tickCombo(dt);
+    //  Decay systems
+    // phantom_chrono: while in slow motion, combo timer doesn't decay
+    const comboTickDt = (syns.has('phantom_chrono') && s.game.timeScale < 0.8) ? 0 : dt;
+    s.tickCombo(comboTickDt);
     s.tickCritical(rawDt);
     s.decayShake();
 
@@ -152,6 +158,10 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
             if (upg('blast_rune') > 0 && !blastRuneUsedRef.current) {
               blastRuneUsedRef.current = true;
               flashAlphaRef.current = 0.15;
+              // blast_surge: absorbing explosion grants 5 guaranteed crits
+              if (syns.has('blast_surge')) {
+                blastSurgeCritsRef.current = 5;
+              }
             } else {
               s.takeDamage(1);
               s.breakCombo();
@@ -187,11 +197,17 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
 
             const critFast = 0.25 + upg('crumb_accelerator') * 0.10;
             const critSlow = 0.08 + upg('crumb_accelerator') * 0.08;
-            const isCritical = Math.random() < (velocity > 200 ? critFast : critSlow);
+            // blast_surge: consume one guaranteed crit charge if available
+            const hasSurgeCharge = blastSurgeCritsRef.current > 0;
+            if (hasSurgeCharge) blastSurgeCritsRef.current--;
+            const isCritical = hasSurgeCharge || Math.random() < (velocity > 200 ? critFast : critSlow);
             const isGolden = cookie.type === 'golden';
 
             const baseScore = isGolden ? 150 : 50;
-            const ghostDouble = Math.random() < upg('ghost_multiplier') * 0.15 ? 2 : 1;
+            // ghost_fortune: ghost doubles its trigger chance on golden cookies
+            const ghostChance = upg('ghost_multiplier') * 0.15
+              * (syns.has('ghost_fortune') && isGolden ? 2 : 1);
+            const ghostDouble = Math.random() < ghostChance ? 2 : 1;
             const scoreBonus = (isCritical ? baseScore * 2 : baseScore) * ghostDouble;
 
             s.addScore(scoreBonus);
@@ -295,6 +311,11 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     }
 
     if (director.isWaveComplete() && s.cookies.filter((c) => c.state === 'falling').length === 0) {
+      // soul_overflow: HP above base (3) grants bonus reiki per wave clear
+      if (syns.has('soul_overflow')) {
+        const bonusHp = Math.max(0, s.game.hp - 3);
+        if (bonusHp > 0) s.addReiki(bonusHp * 20);
+      }
       s.nextWave();
       director.reset(s.game.wave + 1);
       blastRuneUsedRef.current = false;
@@ -341,6 +362,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     sliceCountRef.current = 0;
     blastRuneUsedRef.current = false;
     chronoRecoveryRef.current = 1.5;
+    blastSurgeCritsRef.current = 0;
   }, []);
 
   return { startGame };

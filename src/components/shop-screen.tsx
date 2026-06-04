@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { UPGRADES } from '../systems/shop';
 import type { UpgradeDef } from '../systems/shop';
+import { getSynergiesForUpgrade, getActiveSynergies, SYNERGIES } from '../systems/synergies';
+import type { SynergyDef } from '../systems/synergies';
 
 const SHOP_CSS = `
 @keyframes border-shop-pulse {
@@ -33,6 +35,8 @@ export function ShopScreen() {
 
   const canAfford = (def: UpgradeDef) => game.reiki >= def.price;
   const isMaxed = (def: UpgradeDef) => getLevel(def.id) >= def.maxLevel;
+
+  const activeSynergies = getActiveSynergies(upgrades);
 
   function handleBuy(def: UpgradeDef) {
     if (!canAfford(def) || isMaxed(def)) return;
@@ -150,6 +154,50 @@ export function ShopScreen() {
           </div>
         </div>
 
+        {/* Active Synergies panel */}
+        {activeSynergies.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <div
+              style={{
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: 7,
+                color: '#9B00FF',
+                letterSpacing: 3,
+                textShadow: '0 0 6px #9B00FF',
+                marginBottom: 10,
+                textAlign: 'center',
+              }}
+            >
+              ◈ ACTIVE SYNERGIES ◈
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+              {activeSynergies.map((syn) => (
+                <motion.div
+                  key={syn.id}
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 14px',
+                    border: `1px solid ${syn.color}66`,
+                    background: `${syn.color}11`,
+                    boxShadow: `0 0 10px ${syn.color}33`,
+                  }}
+                >
+                  <span style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 10, color: syn.color, textShadow: `0 0 8px ${syn.color}` }}>
+                    {syn.icon}
+                  </span>
+                  <span style={{ fontFamily: '"Press Start 2P", monospace', fontSize: 6, color: syn.color, letterSpacing: 1 }}>
+                    {syn.name.toUpperCase()}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Upgrade grid */}
         <div
           style={{
@@ -166,6 +214,7 @@ export function ShopScreen() {
               level={getLevel(def.id)}
               affordable={canAfford(def)}
               maxed={isMaxed(def)}
+              upgrades={upgrades}
               onSelect={() => setSelected(def)}
             />
           ))}
@@ -201,6 +250,7 @@ export function ShopScreen() {
             level={getLevel(selected.id)}
             affordable={canAfford(selected)}
             maxed={isMaxed(selected)}
+            upgrades={upgrades}
             onBuy={() => handleBuy(selected)}
             onClose={() => setSelected(null)}
           />
@@ -217,11 +267,17 @@ interface UpgradeCardProps {
   level: number;
   affordable: boolean;
   maxed: boolean;
+  upgrades: Record<string, number>;
   onSelect: () => void;
 }
 
-function UpgradeCard({ def, level, affordable, maxed, onSelect }: UpgradeCardProps) {
-  const borderColor = maxed
+function UpgradeCard({ def, level, affordable, maxed, upgrades, onSelect }: UpgradeCardProps) {
+  const { active: activeSyns, potential: potentialSyns } = getSynergiesForUpgrade(def.id, upgrades);
+  const hasSynergyHint = activeSyns.length > 0 || potentialSyns.length > 0;
+
+  const borderColor = activeSyns.length > 0
+    ? activeSyns[0].color
+    : maxed
     ? `${def.iconColor}99`
     : affordable
     ? `${def.iconColor}55`
@@ -319,6 +375,47 @@ function UpgradeCard({ def, level, affordable, maxed, onSelect }: UpgradeCardPro
       >
         {buttonLabel}
       </div>
+
+      {/* Synergy hint badges */}
+      {hasSynergyHint && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center', marginTop: 2 }}>
+          {activeSyns.map((syn) => (
+            <div
+              key={syn.id}
+              title={syn.name}
+              style={{
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: 6,
+                color: syn.color,
+                background: `${syn.color}22`,
+                border: `1px solid ${syn.color}88`,
+                padding: '2px 4px',
+                textShadow: `0 0 6px ${syn.color}`,
+                letterSpacing: 0,
+              }}
+            >
+              {syn.icon}
+            </div>
+          ))}
+          {potentialSyns.map((syn) => (
+            <div
+              key={syn.id}
+              title={`Potential: ${syn.name}`}
+              style={{
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: 6,
+                color: '#555',
+                background: 'transparent',
+                border: '1px solid #333',
+                padding: '2px 4px',
+                letterSpacing: 0,
+              }}
+            >
+              {syn.icon}
+            </div>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -328,16 +425,18 @@ interface UpgradeModalProps {
   level: number;
   affordable: boolean;
   maxed: boolean;
+  upgrades: Record<string, number>;
   onBuy: () => void;
   onClose: () => void;
 }
 
-function UpgradeModal({ def, level, affordable, maxed, onBuy, onClose }: UpgradeModalProps) {
+function UpgradeModal({ def, level, affordable, maxed, upgrades, onBuy, onClose }: UpgradeModalProps) {
   function handleBuy() {
     if (maxed || !affordable) return;
     onBuy();
   }
 
+  const { active: activeSyns, potential: potentialSyns } = getSynergiesForUpgrade(def.id, upgrades);
   const buyLabel = maxed ? '✓ MAXED OUT' : affordable ? `¥${def.price}  BUY` : 'NOT ENOUGH 霊気';
   const canBuy = !maxed && affordable;
 
@@ -470,6 +569,41 @@ function UpgradeModal({ def, level, affordable, maxed, onBuy, onClose }: Upgrade
           {def.description}
         </div>
 
+        {/* Synergy hints */}
+        {(activeSyns.length > 0 || potentialSyns.length > 0) && (
+          <>
+            <div
+              style={{
+                width: '100%',
+                height: 1,
+                background: 'linear-gradient(90deg, transparent, rgba(155,0,255,0.4), transparent)',
+              }}
+            />
+            <div style={{ width: '100%' }}>
+              <div
+                style={{
+                  fontFamily: '"Press Start 2P", monospace',
+                  fontSize: 6,
+                  color: '#9B00FF',
+                  letterSpacing: 2,
+                  marginBottom: 8,
+                  textAlign: 'center',
+                }}
+              >
+                SYNERGIES
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {activeSyns.map((syn) => (
+                  <SynergyHint key={syn.id} syn={syn} active={true} />
+                ))}
+                {potentialSyns.map((syn) => (
+                  <SynergyHint key={syn.id} syn={syn} active={false} upgrades={upgrades} />
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
         {/* Divider */}
         <div
           style={{
@@ -510,6 +644,95 @@ function UpgradeModal({ def, level, affordable, maxed, onBuy, onClose }: Upgrade
           {buyLabel}
         </motion.button>
       </motion.div>
+    </motion.div>
+  );
+}
+
+// ── SynergyHint ───────────────────────────────────────────────────────────────
+
+interface SynergyHintProps {
+  syn: SynergyDef;
+  active: boolean;
+  upgrades?: Record<string, number>;
+}
+
+function SynergyHint({ syn, active, upgrades }: SynergyHintProps) {
+  // For potential synergies, find which upgrades are missing
+  const missingIds = !active && upgrades
+    ? syn.requires.filter((id) => (upgrades[id] ?? 0) < 1)
+    : [];
+
+  const missingNames = missingIds.map((id) => {
+    const def = UPGRADES.find((u) => u.id === id);
+    return def ? def.name : id.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  });
+
+  return (
+    <motion.div
+      initial={active ? { scale: 0.9, opacity: 0 } : {}}
+      animate={active ? { scale: 1, opacity: 1 } : {}}
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 8,
+        padding: '8px 10px',
+        border: `1px solid ${active ? syn.color + '88' : '#333'}`,
+        background: active ? `${syn.color}11` : 'transparent',
+        boxShadow: active ? `0 0 8px ${syn.color}22` : 'none',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: 10,
+          color: active ? syn.color : '#444',
+          textShadow: active ? `0 0 8px ${syn.color}` : 'none',
+          flexShrink: 0,
+          marginTop: 1,
+        }}
+      >
+        {syn.icon}
+      </span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <div
+          style={{
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: 7,
+            color: active ? syn.color : '#555',
+            textShadow: active ? `0 0 6px ${syn.color}` : 'none',
+            letterSpacing: 1,
+          }}
+        >
+          {syn.name.toUpperCase()}
+          {active && (
+            <span style={{ color: '#00FF88', marginLeft: 6, fontSize: 6 }}>ACTIVE</span>
+          )}
+        </div>
+        {!active && missingNames.length > 0 && (
+          <div
+            style={{
+              fontFamily: '"Press Start 2P", monospace',
+              fontSize: 5,
+              color: '#444',
+              lineHeight: 1.8,
+            }}
+          >
+            NEEDS: {missingNames.join(', ')}
+          </div>
+        )}
+        {active && (
+          <div
+            style={{
+              fontFamily: '"Press Start 2P", monospace',
+              fontSize: 5,
+              color: '#666',
+              lineHeight: 1.8,
+            }}
+          >
+            {syn.description.slice(0, 80)}...
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }
