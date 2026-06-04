@@ -1,6 +1,10 @@
 import type { CookieType, WaveConfig } from "@/types";
 
 export function pickCookieType(config: WaveConfig, rng: () => number): CookieType {
+  if (config.hasBoss && config.bossSpawnIndex !== undefined && config.bossSpawnIndex === 0) {
+    return 'boss';
+  }
+
   const r = rng();
   let acc = 0;
 
