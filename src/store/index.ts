@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 
-import { Store } from './types';
+import type { Store } from './types';
 import { calcRank, RANK_MULTIPLIERS } from './helpers';
-import { defaultCombo, defaultGame, defaultUpgrades } from './default';
+import { defaultCombo, defaultGame, defaultUpgrades, defaultUnlockedSkins, defaultActiveSkinId } from './default';
+import { audioEngine } from '@/audio';
 
 
 export const useStore = create<Store>((set, get) => ({
@@ -14,6 +15,9 @@ export const useStore = create<Store>((set, get) => ({
   combo: { ...defaultCombo },
   upgrades: { ...defaultUpgrades },
   shopOpen: false,
+  unlockedSkins: new Set(defaultUnlockedSkins),
+  activeSkinId: defaultActiveSkinId,
+  muted: false,
 
   // Game
   setPhase: (phase) => set((s) => ({ game: { ...s.game, phase } })),
@@ -73,7 +77,7 @@ export const useStore = create<Store>((set, get) => ({
     }),
 
   resetGame: () =>
-    set(() => ({
+    set((s) => ({
       game: { ...defaultGame },
       cookies: [],
       halves: [],
@@ -82,6 +86,9 @@ export const useStore = create<Store>((set, get) => ({
       combo: { ...defaultCombo },
       upgrades: { ...defaultUpgrades },
       shopOpen: false,
+      // Preserve unlocked skins and active skin across resets
+      unlockedSkins: s.unlockedSkins,
+      activeSkinId: s.activeSkinId,
     })),
 
   nextWave: () =>
@@ -99,6 +106,26 @@ export const useStore = create<Store>((set, get) => ({
         game: { ...s.game, reiki: s.game.reiki - price },
         upgrades: { ...s.upgrades, [id]: current + 1 },
       };
+    }),
+
+  // Slash skins
+  unlockSkin: (skinId, price) =>
+    set((s) => {
+      if (s.unlockedSkins.has(skinId)) return {};
+      if (s.game.reiki < price) return {};
+      const next = new Set(s.unlockedSkins);
+      next.add(skinId);
+      return {
+        game: { ...s.game, reiki: s.game.reiki - price },
+        unlockedSkins: next,
+        activeSkinId: skinId,
+      };
+    }),
+
+  equipSkin: (skinId) =>
+    set((s) => {
+      if (!s.unlockedSkins.has(skinId)) return {};
+      return { activeSkinId: skinId };
     }),
 
   // Cookies
@@ -176,5 +203,13 @@ export const useStore = create<Store>((set, get) => ({
         return { combo: { ...defaultCombo } };
       }
       return { combo: { ...s.combo, decayTimer, flash: false } };
+    }),
+
+  // Audio
+  toggleMute: () =>
+    set((s) => {
+      const muted = !s.muted;
+      audioEngine.setMuted(muted);
+      return { muted };
     }),
 }));

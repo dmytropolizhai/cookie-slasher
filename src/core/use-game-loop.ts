@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useStore } from '@/store';
+import { audioEngine } from '@/audio';
 
 import {
   makeCrumbs,
@@ -20,8 +21,11 @@ import { checkSlashHit } from '@/systems/slash/hit-detection';
 import { spawnCookie } from '@/systems/cookies/factory';
 import { stepCookie } from '@/systems/cookies/movement';
 import { stepHalf } from '@/systems/halves';
+import { getActiveSeasonalEvent } from '@/systems/seasonal';
+import { getSkinById } from '@/systems/slash-skins';
 
 import type { CookieHalf, Vec2 } from '@/types';
+import type { SeasonalEvent } from '@/systems/seasonal';
 
 export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
   const store = useStore();
@@ -41,6 +45,9 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
   const sliceCountRef = useRef(0);
   const blastRuneUsedRef = useRef(false);
   const chronoRecoveryRef = useRef(1.5);
+  const prevComboRankRef = useRef<string>('D');
+  const prevTimeScaleRef = useRef(1);
+  const seasonalEventRef = useRef<SeasonalEvent | null>(null);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     const canvas = canvasRef.current;
@@ -121,7 +128,28 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     }
     if (s.game.timeScale >= 1) chronoRecoveryRef.current = 1.5;
 
-    //  Flash decay 
+    // Slow-mo sound cues
+    const prevTs = prevTimeScaleRef.current;
+    const currTs = s.game.timeScale;
+    if (prevTs >= 0.9 && currTs < 0.5) audioEngine.play("slow_mo_in");
+    if (prevTs < 0.5 && currTs >= 0.9) audioEngine.play("slow_mo_out");
+    prevTimeScaleRef.current = currTs;
+
+    // Combo rank-up / break sounds
+    const currRank = s.combo.rank;
+    if (currRank !== prevComboRankRef.current) {
+      const rankOrder = ["D", "C", "B", "A", "S", "SS", "SSS"];
+      const prevIdx = rankOrder.indexOf(prevComboRankRef.current);
+      const currIdx = rankOrder.indexOf(currRank);
+      if (s.combo.count > 0 && currIdx > prevIdx) audioEngine.play("combo_up");
+      else if (currIdx < prevIdx) audioEngine.play("combo_break");
+    }
+    if (s.combo.count === 0 && prevComboRankRef.current !== "D") {
+      audioEngine.play("combo_break");
+    }
+    prevComboRankRef.current = currRank;
+
+    //  Flash decay
     flashAlphaRef.current = Math.max(0, flashAlphaRef.current - rawDt * 4);
 
     //  Slash detection 
@@ -149,6 +177,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
 
           if (cookie.type === 'bomb') {
             s.updateCookie(cookie.id, { state: 'exploded' });
+            audioEngine.play('explosion');
             if (upg('blast_rune') > 0 && !blastRuneUsedRef.current) {
               blastRuneUsedRef.current = true;
               flashAlphaRef.current = 0.15;
@@ -162,6 +191,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
             makeNeonFragments(cookie.pos, 12).forEach(s.addParticle);
           } else if (cookie.type === 'fake') {
             s.updateCookie(cookie.id, { state: 'sliced' });
+            audioEngine.play('slice_fake');
             s.addReiki(-10);
             s.breakCombo(true);
             s.triggerShake(3);
@@ -170,14 +200,17 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
             const newHp = cookie.hp - 1;
             if (newHp <= 0) {
               s.updateCookie(cookie.id, { state: 'sliced', hp: 0 });
-              s.addScore(500);
-              s.addReiki(100);
+              audioEngine.play('boss_roar');
+              const bossSeasonalMult = seasonalEventRef.current?.scoreMultiplier ?? 1;
+              s.addScore(Math.round(500 * bossSeasonalMult));
+              s.addReiki(Math.round(100 * (seasonalEventRef.current?.reikiMultiplier ?? 1)));
               s.incrementCombo();
               makeCriticalBurst(cookie.pos, 30).forEach(s.addParticle);
               makeNeonFragments(cookie.pos, 20).forEach(s.addParticle);
               flashAlphaRef.current = 0.5;
             } else {
               s.updateCookie(cookie.id, { hp: newHp });
+              audioEngine.play('slice_normal');
               s.triggerShake(3);
               makeImpactSparks(cookie.pos, 8).forEach(s.addParticle);
             }
@@ -192,10 +225,12 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
 
             const baseScore = isGolden ? 150 : 50;
             const ghostDouble = Math.random() < upg('ghost_multiplier') * 0.15 ? 2 : 1;
-            const scoreBonus = (isCritical ? baseScore * 2 : baseScore) * ghostDouble;
+            const seasonalScoreMult = seasonalEventRef.current?.scoreMultiplier ?? 1;
+            const seasonalReikiMult = seasonalEventRef.current?.reikiMultiplier ?? 1;
+            const scoreBonus = Math.round((isCritical ? baseScore * 2 : baseScore) * ghostDouble * seasonalScoreMult);
 
             s.addScore(scoreBonus);
-            s.addReiki(isGolden ? 30 : 10);
+            s.addReiki(Math.round((isGolden ? 30 : 10) * seasonalReikiMult));
             s.incrementCombo();
 
             sliceCountRef.current++;
@@ -217,11 +252,15 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
               s.triggerShake(6);
               flashAlphaRef.current = 0.6;
               makeCriticalBurst(cookie.pos, 25).forEach(s.addParticle);
+              audioEngine.play('slice_critical');
             } else if (isGolden) {
               s.setTimeScale(0.5);
               s.triggerShake(4);
               flashAlphaRef.current = 0.35;
               makeNeonFragments(cookie.pos, 10).forEach(s.addParticle);
+              audioEngine.play('slice_golden');
+            } else {
+              audioEngine.play('slice_normal');
             }
 
             const half1: CookieHalf = {
@@ -300,10 +339,12 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
       blastRuneUsedRef.current = false;
     }
 
-    //  Render 
+    //  Render
     if (canvas) {
       const ctx = canvas.getContext('2d');
       if (ctx) {
+        const activeSkin = getSkinById(s.activeSkinId);
+        const ev = seasonalEventRef.current;
         renderFrame({
           ctx,
           width: canvas.width,
@@ -316,6 +357,11 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
           now,
           time: timeRef.current,
           flashAlpha: flashAlphaRef.current,
+          slashGlowColor: activeSkin.glowColor,
+          slashCoreColor: activeSkin.coreColor,
+          seasonalBg: ev
+            ? { skyTop: ev.skyTop, skyMid: ev.skyMid, skyBot: ev.skyBot, gridStroke: ev.gridStroke }
+            : undefined,
         });
       }
     }
@@ -341,7 +387,9 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     sliceCountRef.current = 0;
     blastRuneUsedRef.current = false;
     chronoRecoveryRef.current = 1.5;
+    // Detect seasonal event at game start
+    seasonalEventRef.current = getActiveSeasonalEvent();
   }, []);
 
-  return { startGame };
+  return { startGame, seasonalEventRef };
 }

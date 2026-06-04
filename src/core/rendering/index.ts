@@ -18,6 +18,16 @@ type RenderFrameParams = BackgroundContextWithTime & {
   game: GameState;
   now: number;
   flashAlpha: number;
+  /** Optional slash trail skin colors */
+  slashGlowColor?: string;
+  slashCoreColor?: string;
+  /** Optional seasonal background overrides */
+  seasonalBg?: {
+    skyTop: string;
+    skyMid: string;
+    skyBot: string;
+    gridStroke: string;
+  };
 }
 
 const BG_PARTICLE_TYPES = new Set(['sakura', 'neon']);
@@ -39,6 +49,9 @@ export function renderFrame({
   now,
   time,
   flashAlpha,
+  slashGlowColor,
+  slashCoreColor,
+  seasonalBg,
 }: RenderFrameParams): void {
 
   // Screen shake
@@ -49,8 +62,8 @@ export function renderFrame({
   ctx.save();
   ctx.translate(shakeX, shakeY);
 
-  // Background scene
-  drawBackground({ ctx, width, height, time });
+  // Background scene (with optional seasonal color overrides)
+  drawBackground({ ctx, width, height, time, seasonalBg });
 
   // Background particles (sakura petals, neon dots)
   for (const p of particles) {
@@ -72,8 +85,8 @@ export function renderFrame({
     if (!isBackgroundParticle(p)) drawParticle(ctx, p);
   }
 
-  // Slash trail
-  drawSlashTrail(ctx, slash, now);
+  // Slash trail (with optional skin colors)
+  drawSlashTrail(ctx, slash, now, slashGlowColor, slashCoreColor);
 
   // Vignette overlay
   drawVignette(ctx, width, height);

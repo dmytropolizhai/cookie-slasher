@@ -30,19 +30,32 @@ export type BackgroundContext = {
   width: number;
   height: number;
 }
-export type BackgroundContextWithTime = BackgroundContext & { time: number };
+
+export type SeasonalBgOverride = {
+  skyTop: string;
+  skyMid: string;
+  skyBot: string;
+  gridStroke: string;
+};
+
+export type BackgroundContextWithTime = BackgroundContext & {
+  time: number;
+  /** Optional seasonal background colour overrides */
+  seasonalBg?: SeasonalBgOverride;
+};
 
 /**
  * Draw sky
  * @param ctx Canvas context
  * @param width Width
  * @param height Height
+ * @param override Optional seasonal colour overrides
  */
-function drawSky({ ctx, width, height }: BackgroundContext): void {
+function drawSky({ ctx, width, height }: BackgroundContext, override?: SeasonalBgOverride): void {
   const sky = ctx.createLinearGradient(0, 0, 0, height);
-  sky.addColorStop(0, BG.skyTop);
-  sky.addColorStop(0.5, BG.skyMid);
-  sky.addColorStop(1, BG.skyBot);
+  sky.addColorStop(0, override?.skyTop ?? BG.skyTop);
+  sky.addColorStop(0.5, override?.skyMid ?? BG.skyMid);
+  sky.addColorStop(1, override?.skyBot ?? BG.skyBot);
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, width, height);
 }
@@ -52,11 +65,12 @@ function drawSky({ ctx, width, height }: BackgroundContext): void {
  * @param ctx Canvas context
  * @param width Width
  * @param height Height
+ * @param override Optional seasonal colour overrides
  */
-function drawGridFloor({ ctx, width, height }: BackgroundContext): void {
+function drawGridFloor({ ctx, width, height }: BackgroundContext, override?: SeasonalBgOverride): void {
   ctx.save();
   ctx.globalAlpha = 0.12;
-  ctx.strokeStyle = BG.gridStroke;
+  ctx.strokeStyle = override?.gridStroke ?? BG.gridStroke;
   ctx.lineWidth = 1;
 
   for (let x = 0; x < width; x += GRID_SIZE) {
@@ -146,11 +160,12 @@ function drawNeonHorizon(
 /**
  * Draw background
  * @param ctx Canvas context
- * @param context Background context
+ * @param context Background context (may include seasonal overrides)
  */
 export function drawBackground(context: BackgroundContextWithTime): void {
-  drawSky(context);
-  drawGridFloor(context);
+  const { seasonalBg } = context;
+  drawSky(context, seasonalBg);
+  drawGridFloor(context, seasonalBg);
   drawCitySilhouette(context);
   drawNeonHorizon(context);
 }

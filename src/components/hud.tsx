@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
+import type { SeasonalEvent } from '@/systems/seasonal';
 
 const RANK_COLORS: Record<string, string> = {
   D: '#888888',
@@ -34,8 +35,12 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
-export function HUD() {
-  const { game, combo, openShop } = useStore();
+interface HUDProps {
+  seasonalEvent?: SeasonalEvent | null;
+}
+
+export function HUD({ seasonalEvent }: HUDProps = {}) {
+  const { game, combo, openShop, muted, toggleMute } = useStore();
   const rankColor = RANK_COLORS[combo.rank] ?? '#888';
   const rankShadow = RANK_SHADOW[combo.rank] ?? '';
 
@@ -122,9 +127,75 @@ export function HUD() {
           </div>
         </div>
       </div>
-      
-      
-      <button className="absolute bottom-6 right-6" onClick={() => openShop()}>
+
+      {/* ── Seasonal Event Banner ── */}
+      {seasonalEvent && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="absolute top-20 left-1/2 -translate-x-1/2 flex items-center gap-2"
+          style={{ pointerEvents: 'none' }}
+        >
+          <motion.div
+            animate={{ opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '4px 14px',
+              border: `1px solid ${seasonalEvent.color}55`,
+              background: `${seasonalEvent.color}18`,
+              boxShadow: `0 0 12px ${seasonalEvent.glowColor}44`,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: 8,
+                color: seasonalEvent.color,
+                textShadow: `0 0 8px ${seasonalEvent.glowColor}`,
+                letterSpacing: 2,
+              }}
+            >
+              {seasonalEvent.emoji} {seasonalEvent.name}
+            </span>
+            <span
+              style={{
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: 7,
+                color: `${seasonalEvent.color}cc`,
+                letterSpacing: 1,
+              }}
+            >
+              x{seasonalEvent.scoreMultiplier} SCORE
+            </span>
+          </motion.div>
+        </motion.div>
+      )}
+
+      <div className="absolute top-4 right-6 flex gap-2" style={{ pointerEvents: 'auto' }}>
+        <button
+          onClick={toggleMute}
+          title={muted ? 'Unmute' : 'Mute'}
+          style={{
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: 10,
+            color: muted ? '#444' : '#00FFFF',
+            background: 'rgba(0,0,0,0.5)',
+            border: `1px solid ${muted ? '#333' : '#00FFFF44'}`,
+            padding: '6px 8px',
+            cursor: 'pointer',
+            textShadow: muted ? 'none' : '0 0 8px #00FFFF',
+            boxShadow: muted ? 'none' : '0 0 8px #00FFFF22',
+            lineHeight: 1,
+          }}
+        >
+          {muted ? 'MUTE' : 'VOL'}
+        </button>
+      </div>
+      <button className="absolute bottom-6 right-6" onClick={() => openShop()} style={{ pointerEvents: 'auto' }}>
         Shop
       </button>
 

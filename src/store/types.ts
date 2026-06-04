@@ -58,9 +58,21 @@ export interface Store {
   closeShop: () => void;
   purchaseUpgrade: (id: string, price: number) => void;
 
+  // Slash skins
+  /** Set of unlocked skin ids */
+  unlockedSkins: Set<string>;
+  /** Currently equipped skin id */
+  activeSkinId: string;
+  unlockSkin: (skinId: string, price: number) => void;
+  equipSkin: (skinId: string) => void;
+
   // Combo
   combo: ComboState;
   incrementCombo: () => void;
   breakCombo: (partial?: boolean) => void;
   tickCombo: (dt: number) => void;
+
+  // Audio
+  muted: boolean;
+  toggleMute: () => void;
 }

@@ -11,7 +11,11 @@ export function drawSlashTrail(
   ctx: CanvasRenderingContext2D,
   slash: SlashTrail,
   now: number,
+  glowColor?: string,
+  coreColor?: string,
 ): void {
+  const effectiveGlow = glowColor ?? SLASH_GLOW_COLOR;
+  const effectiveCore = coreColor ?? SLASH_CORE_COLOR;
   const { points } = slash;
   if (points.length < 2) return;
 
@@ -33,10 +37,10 @@ export function drawSlashTrail(
 
     // Outer glow
     ctx.globalAlpha = a0 * 0.4;
-    ctx.strokeStyle = SLASH_GLOW_COLOR;
+    ctx.strokeStyle = effectiveGlow;
     ctx.lineWidth = width + GLOW_EXTRA_WIDTH;
     ctx.shadowBlur = GLOW_BLUR;
-    ctx.shadowColor = SLASH_GLOW_COLOR;
+    ctx.shadowColor = effectiveGlow;
     ctx.beginPath();
     ctx.moveTo(p0.pos.x, p0.pos.y);
     ctx.lineTo(p1.pos.x, p1.pos.y);
@@ -44,7 +48,7 @@ export function drawSlashTrail(
 
     // Inner core
     ctx.globalAlpha = (a0 + a1) * 0.5;
-    ctx.strokeStyle = SLASH_CORE_COLOR;
+    ctx.strokeStyle = effectiveCore;
     ctx.lineWidth = width;
     ctx.shadowBlur = 0;
     ctx.beginPath();

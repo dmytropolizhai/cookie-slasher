@@ -1,6 +1,10 @@
 import { ComboState, GameState } from "@/types";
+import { DEFAULT_SKIN_ID } from '@/systems/slash-skins';
 
 export const defaultUpgrades: Record<string, number> = {};
+
+export const defaultUnlockedSkins = new Set<string>([DEFAULT_SKIN_ID]);
+export const defaultActiveSkinId = DEFAULT_SKIN_ID;
 
 export const defaultGame: GameState = {
   phase: 'menu',

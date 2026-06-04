@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { UPGRADES } from '../systems/shop';
 import type { UpgradeDef } from '../systems/shop';
+import { SLASH_SKINS } from '@/systems/slash-skins';
+import type { SlashSkin } from '@/systems/slash-skins';
 
 const SHOP_CSS = `
 @keyframes border-shop-pulse {
@@ -23,9 +25,14 @@ function injectShopStyles() {
   document.head.appendChild(s);
 }
 
+type ShopTab = 'upgrades' | 'skins';
+
 export function ShopScreen() {
-  const { game, upgrades, purchaseUpgrade, addMaxHp, closeShop } = useStore();
+  const { game, upgrades, purchaseUpgrade, addMaxHp, closeShop,
+          unlockedSkins, activeSkinId, unlockSkin, equipSkin } = useStore();
+  const [tab, setTab] = useState<ShopTab>('upgrades');
   const [selected, setSelected] = useState<UpgradeDef | null>(null);
+  const [selectedSkin, setSelectedSkin] = useState<SlashSkin | null>(null);
 
   injectShopStyles();
 
@@ -38,6 +45,16 @@ export function ShopScreen() {
     if (!canAfford(def) || isMaxed(def)) return;
     purchaseUpgrade(def.id, def.price);
     if (def.id === 'soul_shard') addMaxHp(1);
+  }
+
+  function handleSkinAction(skin: SlashSkin) {
+    if (unlockedSkins.has(skin.id)) {
+      equipSkin(skin.id);
+      setSelectedSkin(null);
+    } else if (game.reiki >= skin.price) {
+      unlockSkin(skin.id, skin.price);
+      setSelectedSkin(null);
+    }
   }
 
   return (
@@ -148,28 +165,81 @@ export function ShopScreen() {
               ¥{game.reiki}
             </div>
           </div>
+
+          {/* Tab switcher */}
+          <div className="flex gap-3 mt-2">
+            {(['upgrades', 'skins'] as ShopTab[]).map((t) => {
+              const isActive = tab === t;
+              const label = t === 'upgrades' ? 'UPGRADES' : 'TRAIL SKINS';
+              return (
+                <motion.button
+                  key={t}
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setTab(t)}
+                  style={{
+                    fontFamily: '"Press Start 2P", monospace',
+                    fontSize: 9,
+                    color: isActive ? '#FFE600' : '#555',
+                    background: 'transparent',
+                    border: `1px solid ${isActive ? '#FFE60066' : '#33333366'}`,
+                    padding: '8px 22px',
+                    cursor: 'pointer',
+                    letterSpacing: 2,
+                    textShadow: isActive ? '0 0 8px #FFE600' : 'none',
+                    boxShadow: isActive ? '0 0 10px rgba(255,230,0,0.2)' : 'none',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {label}
+                </motion.button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Upgrade grid */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: 16,
-            marginBottom: 28,
-          }}
-        >
-          {UPGRADES.map((def) => (
-            <UpgradeCard
-              key={def.id}
-              def={def}
-              level={getLevel(def.id)}
-              affordable={canAfford(def)}
-              maxed={isMaxed(def)}
-              onSelect={() => setSelected(def)}
-            />
-          ))}
-        </div>
+        {/* Content by tab */}
+        {tab === 'upgrades' ? (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, 1fr)',
+              gap: 16,
+              marginBottom: 28,
+            }}
+          >
+            {UPGRADES.map((def) => (
+              <UpgradeCard
+                key={def.id}
+                def={def}
+                level={getLevel(def.id)}
+                affordable={canAfford(def)}
+                maxed={isMaxed(def)}
+                onSelect={() => setSelected(def)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, 1fr)',
+              gap: 16,
+              marginBottom: 28,
+            }}
+          >
+            {SLASH_SKINS.map((skin) => (
+              <SkinCard
+                key={skin.id}
+                skin={skin}
+                unlocked={unlockedSkins.has(skin.id)}
+                equipped={activeSkinId === skin.id}
+                affordable={game.reiki >= skin.price}
+                onSelect={() => setSelectedSkin(skin)}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Close button */}
         <div className="flex justify-center">
@@ -193,7 +263,7 @@ export function ShopScreen() {
         </div>
       </motion.div>
 
-      {/* Item modal */}
+      {/* Upgrade item modal */}
       <AnimatePresence>
         {selected && (
           <UpgradeModal
@@ -203,6 +273,20 @@ export function ShopScreen() {
             maxed={isMaxed(selected)}
             onBuy={() => handleBuy(selected)}
             onClose={() => setSelected(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Skin item modal */}
+      <AnimatePresence>
+        {selectedSkin && (
+          <SkinModal
+            skin={selectedSkin}
+            unlocked={unlockedSkins.has(selectedSkin.id)}
+            equipped={activeSkinId === selectedSkin.id}
+            affordable={game.reiki >= selectedSkin.price}
+            onAction={() => handleSkinAction(selectedSkin)}
+            onClose={() => setSelectedSkin(null)}
           />
         )}
       </AnimatePresence>
@@ -508,6 +592,316 @@ function UpgradeModal({ def, level, affordable, maxed, onBuy, onClose }: Upgrade
           }}
         >
           {buyLabel}
+        </motion.button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ── Slash Skin sub-components ─────────────────────────────────────────────────
+
+interface SkinCardProps {
+  skin: SlashSkin;
+  unlocked: boolean;
+  equipped: boolean;
+  affordable: boolean;
+  onSelect: () => void;
+}
+
+function SkinCard({ skin, unlocked, equipped, affordable, onSelect }: SkinCardProps) {
+  const borderColor = equipped
+    ? skin.iconColor
+    : unlocked
+    ? `${skin.iconColor}77`
+    : affordable
+    ? `${skin.iconColor}44`
+    : 'rgba(60,60,60,0.3)';
+
+  const statusLabel = equipped ? 'EQUIPPED' : unlocked ? 'EQUIP' : affordable ? `¥${skin.price}` : `¥${skin.price}`;
+  const statusColor = equipped ? skin.iconColor : unlocked ? '#00FF88' : affordable ? '#FFE600' : '#555';
+
+  return (
+    <motion.div
+      whileHover={{ scale: 1.04, borderColor: skin.iconColor }}
+      whileTap={{ scale: 0.97 }}
+      onClick={onSelect}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 10,
+        padding: '18px 10px 14px',
+        border: `2px solid ${borderColor}`,
+        background: equipped ? `${skin.iconColor}15` : 'rgba(6,0,18,0.7)',
+        cursor: 'pointer',
+        transition: 'border-color 0.2s',
+        position: 'relative',
+      }}
+    >
+      {/* Equipped badge */}
+      {equipped && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 5,
+            right: 6,
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: 6,
+            color: skin.iconColor,
+            textShadow: `0 0 6px ${skin.iconColor}`,
+          }}
+        >
+          ■
+        </div>
+      )}
+
+      {/* Trail preview */}
+      <div style={{ position: 'relative', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <svg width="40" height="40" viewBox="0 0 40 40" style={{ overflow: 'visible' }}>
+          <line
+            x1="8" y1="32" x2="32" y2="8"
+            stroke={skin.glowColor}
+            strokeWidth="8"
+            strokeLinecap="round"
+            opacity="0.35"
+            filter="url(#blur)"
+          />
+          <line
+            x1="8" y1="32" x2="32" y2="8"
+            stroke={skin.coreColor}
+            strokeWidth="3"
+            strokeLinecap="round"
+            opacity="0.9"
+          />
+        </svg>
+      </div>
+
+      {/* Icon char */}
+      <div
+        style={{
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: 16,
+          color: unlocked ? skin.iconColor : `${skin.iconColor}66`,
+          textShadow: unlocked ? `0 0 12px ${skin.iconColor}` : 'none',
+          lineHeight: 1,
+        }}
+      >
+        {skin.icon}
+      </div>
+
+      {/* Name */}
+      <div
+        style={{
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: 5,
+          color: unlocked ? '#ccc' : '#555',
+          textAlign: 'center',
+          lineHeight: 1.6,
+          minHeight: 22,
+        }}
+      >
+        {skin.name}
+      </div>
+
+      {/* Status / price */}
+      <div
+        style={{
+          fontFamily: '"Press Start 2P", monospace',
+          fontSize: 8,
+          color: statusColor,
+          textShadow: equipped ? `0 0 8px ${skin.iconColor}` : 'none',
+        }}
+      >
+        {statusLabel}
+      </div>
+    </motion.div>
+  );
+}
+
+interface SkinModalProps {
+  skin: SlashSkin;
+  unlocked: boolean;
+  equipped: boolean;
+  affordable: boolean;
+  onAction: () => void;
+  onClose: () => void;
+}
+
+function SkinModal({ skin, unlocked, equipped, affordable, onAction, onClose }: SkinModalProps) {
+  const actionLabel = equipped
+    ? '✓ EQUIPPED'
+    : unlocked
+    ? 'EQUIP'
+    : affordable
+    ? `¥${skin.price}  UNLOCK`
+    : 'NOT ENOUGH 霊気';
+
+  const canAct = !equipped && (unlocked || affordable);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.12 }}
+      className="absolute inset-0 flex items-center justify-center"
+      style={{ zIndex: 10, background: 'rgba(2,0,8,0.82)', backdropFilter: 'blur(4px)' }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.82, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.82, opacity: 0, y: 20 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 16,
+          padding: '48px 56px',
+          border: `2px solid ${skin.iconColor}66`,
+          background: 'rgba(10,0,24,0.96)',
+          boxShadow: `0 0 40px ${skin.iconColor}33, 0 0 80px rgba(0,0,0,0.8)`,
+          maxWidth: 440,
+          width: '80vw',
+          position: 'relative',
+        }}
+      >
+        {/* Close X */}
+        <motion.button
+          whileHover={{ scale: 1.2, color: '#fff' }}
+          whileTap={{ scale: 0.9 }}
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: 14,
+            right: 18,
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: 10,
+            color: '#555',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          ✕
+        </motion.button>
+
+        {/* Trail preview — large */}
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <defs>
+            <filter id="skin-glow">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+          </defs>
+          <line
+            x1="12" y1="68" x2="68" y2="12"
+            stroke={skin.glowColor}
+            strokeWidth="16"
+            strokeLinecap="round"
+            opacity="0.3"
+            filter="url(#skin-glow)"
+          />
+          <line
+            x1="12" y1="68" x2="68" y2="12"
+            stroke={skin.coreColor}
+            strokeWidth="5"
+            strokeLinecap="round"
+            opacity="1"
+          />
+        </svg>
+
+        {/* Name */}
+        <div
+          style={{
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: 14,
+            color: '#fff',
+            textShadow: `0 0 10px ${skin.iconColor}`,
+            textAlign: 'center',
+            letterSpacing: 2,
+          }}
+        >
+          {skin.name}
+        </div>
+
+        {/* JP name */}
+        <div
+          style={{
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: 9,
+            color: '#9B00FF',
+            textShadow: '0 0 8px #9B00FF',
+            letterSpacing: 4,
+          }}
+        >
+          {skin.nameJP}
+        </div>
+
+        {/* Divider */}
+        <div
+          style={{
+            width: '100%',
+            height: 1,
+            background: `linear-gradient(90deg, transparent, ${skin.iconColor}, transparent)`,
+            opacity: 0.6,
+          }}
+        />
+
+        {/* Description */}
+        <div
+          style={{
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: 7,
+            color: '#888',
+            lineHeight: 2,
+            textAlign: 'center',
+            maxWidth: 320,
+          }}
+        >
+          {skin.description}
+        </div>
+
+        {/* Divider */}
+        <div
+          style={{
+            width: '100%',
+            height: 1,
+            background: 'linear-gradient(90deg, transparent, rgba(155,0,255,0.4), transparent)',
+          }}
+        />
+
+        {/* Action button */}
+        <motion.button
+          whileHover={canAct ? { scale: 1.06, boxShadow: `0 0 30px ${skin.iconColor}` } : {}}
+          whileTap={canAct ? { scale: 0.96 } : {}}
+          onClick={canAct ? onAction : undefined}
+          style={{
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: 11,
+            color: equipped ? '#555' : canAct ? '#fff' : '#444',
+            background: equipped
+              ? 'transparent'
+              : canAct
+              ? `linear-gradient(135deg, #9B00FF, ${skin.iconColor})`
+              : 'transparent',
+            border: equipped
+              ? '2px solid #333'
+              : canAct
+              ? `2px solid ${skin.iconColor}`
+              : '2px solid #333',
+            boxShadow: canAct ? `0 0 16px ${skin.iconColor}88` : 'none',
+            padding: '14px 0',
+            width: '100%',
+            cursor: canAct ? 'pointer' : 'default',
+            letterSpacing: 2,
+            textShadow: canAct ? '0 0 8px rgba(255,255,255,0.7)' : 'none',
+            textAlign: 'center',
+          }}
+        >
+          {actionLabel}
         </motion.button>
       </motion.div>
     </motion.div>

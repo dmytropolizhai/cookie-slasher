@@ -2,11 +2,14 @@ import { useRef, useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useStore } from './store';
 import { useGameLoop } from '@/core/use-game-loop';
+import { useAudio } from '@/audio';
 import { HUD } from './components/hud';
 import { MenuScreen } from './components/menu-screen';
 import { GameOverScreen } from './components/game-over-screen';
 import { PauseScreen } from './components/pause-screen';
 import { ShopScreen } from './components/shop-screen';
+import { getActiveSeasonalEvent } from '@/systems/seasonal';
+import type { SeasonalEvent } from '@/systems/seasonal';
 
 const LS_KEY = 'cookie_slash_hs';
 
@@ -23,7 +26,10 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { game, shopOpen, resumeGame, setPhase } = useStore();
   const { startGame } = useGameLoop(canvasRef);
+  useAudio();
   const [highScore, setHighScore] = useState(loadHighScore);
+  // Compute seasonal event once at app load for menu/HUD display
+  const [seasonalEvent] = useState<SeasonalEvent | null>(() => getActiveSeasonalEvent());
 
   useEffect(() => {
     const resize = () => {
@@ -54,7 +60,7 @@ export default function App() {
     <div className="w-screen h-screen overflow-hidden relative"
       style={{ background: '#0A0010', cursor: game.phase === 'playing' ? 'none' : 'default' }}>
       <canvas ref={canvasRef} className="absolute inset-0" style={{ display: 'block' }} />
-      {(game.phase === 'playing' || game.phase === 'paused') && <HUD />}
+      {(game.phase === 'playing' || game.phase === 'paused') && <HUD seasonalEvent={seasonalEvent} />}
       <AnimatePresence mode="wait">
         {game.phase === 'menu' && <MenuScreen key="menu" onStart={startGame} highScore={highScore} />}
         {game.phase === 'gameover' && <GameOverScreen key="gameover" onRestart={startGame} highScore={highScore} />}
