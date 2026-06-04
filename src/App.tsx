@@ -1,12 +1,14 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useStore } from './store';
 import { useGameLoop } from '@/core/use-game-loop';
+import { getDailySeed, formatDailyDate } from '@/core/seeded-rng';
 import { HUD } from './components/hud';
 import { MenuScreen } from './components/menu-screen';
 import { GameOverScreen } from './components/game-over-screen';
 import { PauseScreen } from './components/pause-screen';
 import { ShopScreen } from './components/shop-screen';
+import { DailyChallengeScreen } from './components/daily-challenge-screen';
 
 const LS_KEY = 'cookie_slash_hs';
 
@@ -21,9 +23,12 @@ function saveHighScore(score: number): void {
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { game, shopOpen, resumeGame, setPhase } = useStore();
+  const { game, shopOpen, resumeGame, setPhase, dailyRecord, saveDailyRecord } = useStore();
   const { startGame } = useGameLoop(canvasRef);
   const [highScore, setHighScore] = useState(loadHighScore);
+  const [showDaily, setShowDaily] = useState(false);
+
+  const todayDate = formatDailyDate();
 
   useEffect(() => {
     const resize = () => {
@@ -37,12 +42,28 @@ export default function App() {
     return () => window.removeEventListener('resize', resize);
   }, []);
 
+  // Save high score for endless mode; save daily record when daily game ends
   useEffect(() => {
-    if (game.phase === 'gameover' && game.score > highScore) {
-      setHighScore(game.score);
-      saveHighScore(game.score);
+    if (game.phase !== 'gameover') return;
+
+    if (game.mode === 'endless') {
+      if (game.score > highScore) {
+        setHighScore(game.score);
+        saveHighScore(game.score);
+      }
+    } else if (game.mode === 'daily' && game.dailyDate) {
+      // Only save if not already saved for today (prevents overwrite on re-render)
+      const existing = dailyRecord;
+      if (!existing || existing.date !== game.dailyDate || !existing.completed) {
+        saveDailyRecord({
+          date: game.dailyDate,
+          score: game.score,
+          wave: game.wave,
+          completed: true,
+        });
+      }
     }
-  }, [game.phase, game.score, highScore]);
+  }, [game.phase, game.score, game.wave, game.mode, game.dailyDate, highScore, dailyRecord, saveDailyRecord]);
 
   useEffect(() => {
     const prevent = (e: MouseEvent) => e.preventDefault();
@@ -50,19 +71,59 @@ export default function App() {
     return () => window.removeEventListener('contextmenu', prevent);
   }, []);
 
+  const handleStartEndless = useCallback(() => {
+    startGame('endless');
+  }, [startGame]);
+
+  const handleStartDaily = useCallback(() => {
+    const seed = getDailySeed();
+    startGame('daily', seed, todayDate);
+    setShowDaily(false);
+  }, [startGame, todayDate]);
+
+  const handleMenu = useCallback(() => {
+    setPhase('menu');
+    setShowDaily(false);
+  }, [setPhase]);
+
   return (
     <div className="w-screen h-screen overflow-hidden relative"
       style={{ background: '#0A0010', cursor: game.phase === 'playing' ? 'none' : 'default' }}>
       <canvas ref={canvasRef} className="absolute inset-0" style={{ display: 'block' }} />
       {(game.phase === 'playing' || game.phase === 'paused') && <HUD />}
       <AnimatePresence mode="wait">
-        {game.phase === 'menu' && <MenuScreen key="menu" onStart={startGame} highScore={highScore} />}
-        {game.phase === 'gameover' && <GameOverScreen key="gameover" onRestart={startGame} highScore={highScore} />}
+        {game.phase === 'menu' && !showDaily && (
+          <MenuScreen
+            key="menu"
+            onStart={handleStartEndless}
+            onDailyChallenge={() => setShowDaily(true)}
+            highScore={highScore}
+            dailyRecord={dailyRecord}
+            todayDate={todayDate}
+          />
+        )}
+        {game.phase === 'menu' && showDaily && (
+          <DailyChallengeScreen
+            key="daily"
+            todayDate={todayDate}
+            record={dailyRecord}
+            onStartDaily={handleStartDaily}
+            onBack={() => setShowDaily(false)}
+          />
+        )}
+        {game.phase === 'gameover' && (
+          <GameOverScreen
+            key="gameover"
+            onRestart={handleStartEndless}
+            onMenu={handleMenu}
+            highScore={highScore}
+          />
+        )}
         {game.phase === 'paused' && (
           <PauseScreen
             key="paused"
             onResume={resumeGame}
-            onQuit={() => setPhase('menu')}
+            onQuit={handleMenu}
           />
         )}
       </AnimatePresence>

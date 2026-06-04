@@ -14,6 +14,7 @@ import {
 import { renderFrame } from '@/core/rendering';
 import { uid, resetEntityId, distance } from '@/core/math';
 import { recycleParticle, tickParticle } from '@/core/particles';
+import { makeSeededRng } from '@/core/seeded-rng';
 
 import { SpawnDirector } from '@/systems/spawn-director';
 import { checkSlashHit } from '@/systems/slash/hit-detection';
@@ -21,7 +22,7 @@ import { spawnCookie } from '@/systems/cookies/factory';
 import { stepCookie } from '@/systems/cookies/movement';
 import { stepHalf } from '@/systems/halves';
 
-import type { CookieHalf, Vec2 } from '@/types';
+import type { CookieHalf, GameMode, Vec2 } from '@/types';
 
 export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
   const store = useStore();
@@ -330,10 +331,18 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     };
   }, [loop]);
 
-  const startGame = useCallback(() => {
-    storeRef.current.resetGame();
+  const startGame = useCallback((mode: GameMode = 'endless', dailySeed?: number, dailyDate?: string) => {
+    storeRef.current.resetGame(mode, dailyDate ?? null);
     storeRef.current.setPhase('playing');
-    directorRef.current.reset(1);
+
+    if (mode === 'daily' && dailySeed !== undefined) {
+      // Use seeded RNG factory: each wave gets its own deterministic RNG derived from the daily seed
+      const rngFactory = (wave: number) => makeSeededRng(dailySeed * 100 + wave);
+      directorRef.current = new SpawnDirector(1, rngFactory);
+    } else {
+      directorRef.current = new SpawnDirector(1);
+    }
+
     resetEntityId();
     flashAlphaRef.current = 0;
     timeRef.current = 0;

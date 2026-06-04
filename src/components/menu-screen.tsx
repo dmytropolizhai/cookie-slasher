@@ -1,11 +1,17 @@
 import { motion } from 'framer-motion';
+import type { DailyChallengeRecord } from '@/types';
 
 interface MenuScreenProps {
   onStart: () => void;
+  onDailyChallenge: () => void;
   highScore: number;
+  dailyRecord: DailyChallengeRecord | null;
+  todayDate: string;
 }
 
-export function MenuScreen({ onStart, highScore }: MenuScreenProps) {
+export function MenuScreen({ onStart, onDailyChallenge, highScore, dailyRecord, todayDate }: MenuScreenProps) {
+  const dailyPlayed = dailyRecord?.date === todayDate && dailyRecord.completed;
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -148,29 +154,57 @@ export function MenuScreen({ onStart, highScore }: MenuScreenProps) {
         ))}
       </motion.div>
 
-      {/* Start button */}
-      <motion.button
+      {/* Buttons */}
+      <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6, type: 'spring' }}
-        whileHover={{ scale: 1.08, boxShadow: '0 0 40px #FF0080, 0 0 80px #9B00FF' }}
-        whileTap={{ scale: 0.95 }}
-        onClick={onStart}
-        style={{
-          fontFamily: '"Press Start 2P", monospace',
-          fontSize: 16,
-          color: '#fff',
-          background: 'linear-gradient(135deg, #9B00FF, #FF0080)',
-          border: '3px solid #FF0080',
-          boxShadow: '0 0 20px #FF0080, 0 0 40px #9B00FF, inset 0 1px 0 rgba(255,255,255,0.2)',
-          padding: '16px 48px',
-          cursor: 'pointer',
-          letterSpacing: 3,
-          textShadow: '0 0 8px rgba(255,255,255,0.8)',
-        }}
+        className="flex flex-col items-center gap-3"
       >
-        ▶ START GAME
-      </motion.button>
+        {/* Start endless */}
+        <motion.button
+          whileHover={{ scale: 1.08, boxShadow: '0 0 40px #FF0080, 0 0 80px #9B00FF' }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onStart}
+          style={{
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: 16,
+            color: '#fff',
+            background: 'linear-gradient(135deg, #9B00FF, #FF0080)',
+            border: '3px solid #FF0080',
+            boxShadow: '0 0 20px #FF0080, 0 0 40px #9B00FF, inset 0 1px 0 rgba(255,255,255,0.2)',
+            padding: '16px 48px',
+            cursor: 'pointer',
+            letterSpacing: 3,
+            textShadow: '0 0 8px rgba(255,255,255,0.8)',
+          }}
+        >
+          ▶ START GAME
+        </motion.button>
+
+        {/* Daily challenge */}
+        <motion.button
+          whileHover={{ scale: 1.06, boxShadow: dailyPlayed ? 'none' : '0 0 30px #FFE600, 0 0 60px rgba(255,230,0,0.3)' }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onDailyChallenge}
+          style={{
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: 11,
+            color: dailyPlayed ? '#664400' : '#000',
+            background: dailyPlayed
+              ? 'linear-gradient(135deg, #332200, #443300)'
+              : 'linear-gradient(135deg, #FFE600, #FF9900)',
+            border: `2px solid ${dailyPlayed ? '#443300' : '#FFE600'}`,
+            boxShadow: dailyPlayed ? 'none' : '0 0 14px #FFE600, inset 0 1px 0 rgba(255,255,255,0.3)',
+            padding: '12px 32px',
+            cursor: 'pointer',
+            letterSpacing: 2,
+            textShadow: dailyPlayed ? 'none' : '0 1px 0 rgba(255,255,255,0.4)',
+          }}
+        >
+          {dailyPlayed ? '★ DAILY DONE' : '★ DAILY CHALLENGE'}
+        </motion.button>
+      </motion.div>
 
       {/* Controls */}
       <motion.div

@@ -4,6 +4,7 @@ export const defaultUpgrades: Record<string, number> = {};
 
 export const defaultGame: GameState = {
   phase: 'menu',
+  mode: 'endless',
   score: 0,
   reiki: 0,
   hp: 5,
@@ -13,6 +14,7 @@ export const defaultGame: GameState = {
   screenShake: 0,
   criticalActive: false,
   criticalTimer: 0,
+  dailyDate: null,
 };
 
 export const defaultCombo: ComboState = {
