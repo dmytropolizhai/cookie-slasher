@@ -1,4 +1,5 @@
 import { ComboState, GameState } from "@/types";
+import type { AchievementState } from "@/systems/achievements";
 
 export const defaultUpgrades: Record<string, number> = {};
 
@@ -22,4 +23,12 @@ export const defaultCombo: ComboState = {
   decayTimer: 0,
   maxDecay: 3,
   flash: false,
+};
+
+export const defaultAchievements: AchievementState[] = [];
+
+export const defaultStats = {
+  slicesTotal: 0,
+  goldenSliced: 0,
+  bombsBlocked: 0,
 };

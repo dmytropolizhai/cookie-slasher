@@ -2,8 +2,36 @@ import { create } from 'zustand';
 
 import { Store } from './types';
 import { calcRank, RANK_MULTIPLIERS } from './helpers';
-import { defaultCombo, defaultGame, defaultUpgrades } from './default';
+import { defaultCombo, defaultGame, defaultUpgrades, defaultAchievements, defaultStats } from './default';
 
+// ── Persistence helpers ───────────────────────────────────────────────────────
+
+const LS_ACHIEVEMENTS = 'cookie_slash_achievements';
+const LS_STATS = 'cookie_slash_stats';
+
+function loadAchievements() {
+  try {
+    const raw = localStorage.getItem(LS_ACHIEVEMENTS);
+    return raw ? JSON.parse(raw) : defaultAchievements;
+  } catch { return defaultAchievements; }
+}
+
+function saveAchievements(achievements: Store['achievements']) {
+  try { localStorage.setItem(LS_ACHIEVEMENTS, JSON.stringify(achievements)); } catch { /* ignore */ }
+}
+
+function loadStats(): Store['stats'] {
+  try {
+    const raw = localStorage.getItem(LS_STATS);
+    return raw ? { ...defaultStats, ...JSON.parse(raw) } : { ...defaultStats };
+  } catch { return { ...defaultStats }; }
+}
+
+function saveStats(stats: Store['stats']) {
+  try { localStorage.setItem(LS_STATS, JSON.stringify(stats)); } catch { /* ignore */ }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const useStore = create<Store>((set, get) => ({
   game: { ...defaultGame },
@@ -14,6 +42,14 @@ export const useStore = create<Store>((set, get) => ({
   combo: { ...defaultCombo },
   upgrades: { ...defaultUpgrades },
   shopOpen: false,
+
+  // Achievements (persist)
+  achievements: loadAchievements(),
+  achievementQueue: [],
+  showAchievements: false,
+
+  // Stats (persist)
+  stats: loadStats(),
 
   // Game
   setPhase: (phase) => set((s) => ({ game: { ...s.game, phase } })),
@@ -114,14 +150,14 @@ export const useStore = create<Store>((set, get) => ({
   addHalf: (h) => set((s) => ({ halves: [...s.halves, h] })),
   removeHalf: (id) => set((s) => ({ halves: s.halves.filter((h) => h.id !== id) })),
   clearHalves: () => set(() => ({ halves: [] })),
-  
+
   // Particles
   addParticle: (p) => set((s) => ({ particles: [...s.particles, p] })),
   removeParticle: (id) =>
     set((s) => ({ particles: s.particles.filter((p) => p.id !== id) })),
   clearParticles: () => set(() => ({ particles: [] })),
 
-  // Slash 
+  // Slash
   pushSlashPoint: (x, y, time) =>
     set((s) => ({
       slash: {
@@ -176,5 +212,46 @@ export const useStore = create<Store>((set, get) => ({
         return { combo: { ...defaultCombo } };
       }
       return { combo: { ...s.combo, decayTimer, flash: false } };
+    }),
+
+  // Achievements
+  unlockAchievement: (id) =>
+    set((s) => {
+      const already = s.achievements.some((a) => a.id === id);
+      if (already) return {};
+      const next: Store['achievements'] = [
+        ...s.achievements,
+        { id, unlockedAt: Date.now() },
+      ];
+      saveAchievements(next);
+      return {
+        achievements: next,
+        achievementQueue: [...s.achievementQueue, id],
+      };
+    }),
+
+  dequeueAchievement: () =>
+    set((s) => ({ achievementQueue: s.achievementQueue.slice(1) })),
+
+  openAchievements: () => set(() => ({ showAchievements: true })),
+  closeAchievements: () => set(() => ({ showAchievements: false })),
+
+  // Stats
+  recordSlice: (type) =>
+    set((s) => {
+      const next = {
+        ...s.stats,
+        slicesTotal: s.stats.slicesTotal + 1,
+        goldenSliced: type === 'golden' ? s.stats.goldenSliced + 1 : s.stats.goldenSliced,
+      };
+      saveStats(next);
+      return { stats: next };
+    }),
+
+  recordBombBlocked: () =>
+    set((s) => {
+      const next = { ...s.stats, bombsBlocked: s.stats.bombsBlocked + 1 };
+      saveStats(next);
+      return { stats: next };
     }),
 }));

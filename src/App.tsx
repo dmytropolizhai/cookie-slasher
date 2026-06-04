@@ -7,6 +7,8 @@ import { MenuScreen } from './components/menu-screen';
 import { GameOverScreen } from './components/game-over-screen';
 import { PauseScreen } from './components/pause-screen';
 import { ShopScreen } from './components/shop-screen';
+import { AchievementToastQueue } from './components/achievement-toast';
+import { AchievementsScreen } from './components/achievements-screen';
 
 const LS_KEY = 'cookie_slash_hs';
 
@@ -21,7 +23,7 @@ function saveHighScore(score: number): void {
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { game, shopOpen, resumeGame, setPhase } = useStore();
+  const { game, shopOpen, showAchievements, resumeGame, setPhase } = useStore();
   const { startGame } = useGameLoop(canvasRef);
   const [highScore, setHighScore] = useState(loadHighScore);
 
@@ -70,6 +72,10 @@ export default function App() {
       <AnimatePresence>
         {shopOpen && <ShopScreen key="shop" />}
       </AnimatePresence>
+      <AnimatePresence>
+        {showAchievements && <AchievementsScreen key="achievements" />}
+      </AnimatePresence>
+      <AchievementToastQueue />
     </div>
   );
 }
