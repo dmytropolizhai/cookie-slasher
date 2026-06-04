@@ -23,6 +23,9 @@ import { stepHalf } from '@/systems/halves';
 
 import type { CookieHalf, Vec2 } from '@/types';
 
+// How long the wave-clear banner stays visible (seconds)
+const WAVE_CLEAR_DURATION = 2.0;
+
 export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>) {
   const store = useStore();
   const storeRef = useRef(store);
@@ -41,6 +44,8 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
   const sliceCountRef = useRef(0);
   const blastRuneUsedRef = useRef(false);
   const chronoRecoveryRef = useRef(1.5);
+  const waveClearTimerRef = useRef(0);
+  const waveClearActiveRef = useRef(false);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     const canvas = canvasRef.current;
@@ -110,10 +115,11 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     timeRef.current += rawDt;
     const now = timestamp / 1000;
 
-    //  Decay systems 
+    //  Decay systems
     s.tickCombo(dt);
     s.tickCritical(rawDt);
     s.decayShake();
+    s.decayDamageVignette(rawDt);
 
     // Restore time scale
     if (s.game.timeScale < 1 && !s.game.criticalActive) {
@@ -152,10 +158,13 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
             if (upg('blast_rune') > 0 && !blastRuneUsedRef.current) {
               blastRuneUsedRef.current = true;
               flashAlphaRef.current = 0.15;
+              s.recordBombAvoided();
             } else {
               s.takeDamage(1);
               s.breakCombo();
               s.triggerShake(8);
+              s.triggerDamageVignette();
+              s.recordBombHit();
               flashAlphaRef.current = 0.3;
             }
             makeExplosion(cookie.pos, 30).forEach(s.addParticle);
@@ -172,7 +181,10 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
               s.updateCookie(cookie.id, { state: 'sliced', hp: 0 });
               s.addScore(500);
               s.addReiki(100);
+              s.recordReikiEarned(100);
+              s.spawnReikiPop(100, cookie.pos.x, cookie.pos.y);
               s.incrementCombo();
+              s.recordSlice();
               makeCriticalBurst(cookie.pos, 30).forEach(s.addParticle);
               makeNeonFragments(cookie.pos, 20).forEach(s.addParticle);
               flashAlphaRef.current = 0.5;
@@ -195,13 +207,22 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
             const scoreBonus = (isCritical ? baseScore * 2 : baseScore) * ghostDouble;
 
             s.addScore(scoreBonus);
-            s.addReiki(isGolden ? 30 : 10);
+            const reikiGain = isGolden ? 30 : 10;
+            s.addReiki(reikiGain);
+            s.recordReikiEarned(reikiGain);
+            s.spawnReikiPop(reikiGain, cookie.pos.x, cookie.pos.y);
             s.incrementCombo();
+            s.recordSlice();
+            // combo count is incremented by incrementCombo — read it from current store state
+            s.recordCombo(s.combo.count + 1);
 
             sliceCountRef.current++;
             const overflowLevel = upg('spirit_overflow');
             if (overflowLevel > 0 && sliceCountRef.current % 10 === 0) {
-              s.addReiki(10 * overflowLevel);
+              const overflowGain = 10 * overflowLevel;
+              s.addReiki(overflowGain);
+              s.recordReikiEarned(overflowGain);
+              s.spawnReikiPop(overflowGain, cookie.pos.x, cookie.pos.y - 30);
             }
 
             makeCrumbs(cookie.pos, cookie.type, isGolden ? 18 : 12).forEach(s.addParticle);
@@ -215,6 +236,7 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
               s.setTimeScale(0.25);
               chronoRecoveryRef.current = chronoRecovery;
               s.triggerShake(6);
+              s.recordCritical();
               flashAlphaRef.current = 0.6;
               makeCriticalBurst(cookie.pos, 25).forEach(s.addParticle);
             } else if (isGolden) {
@@ -257,6 +279,8 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
         toRemove.push(cookie.id);
         s.breakCombo(true);
         s.takeDamage(0);
+        s.recordMiss();
+        s.triggerDamageVignette();
       } else {
         s.updateCookie(cookie.id, step.patch);
       }
@@ -298,6 +322,22 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
       s.nextWave();
       director.reset(s.game.wave + 1);
       blastRuneUsedRef.current = false;
+
+      // Show wave-clear banner
+      if (!waveClearActiveRef.current) {
+        waveClearActiveRef.current = true;
+        waveClearTimerRef.current = WAVE_CLEAR_DURATION;
+        s.showWaveClear();
+      }
+    }
+
+    // Tick wave-clear timer
+    if (waveClearActiveRef.current) {
+      waveClearTimerRef.current -= rawDt;
+      if (waveClearTimerRef.current <= 0) {
+        waveClearActiveRef.current = false;
+        s.hideWaveClear();
+      }
     }
 
     //  Render 
@@ -341,6 +381,8 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
     sliceCountRef.current = 0;
     blastRuneUsedRef.current = false;
     chronoRecoveryRef.current = 1.5;
+    waveClearTimerRef.current = 0;
+    waveClearActiveRef.current = false;
   }, []);
 
   return { startGame };

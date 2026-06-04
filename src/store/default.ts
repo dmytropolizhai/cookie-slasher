@@ -1,4 +1,4 @@
-import { ComboState, GameState } from "@/types";
+import { ComboState, GameState, RunStats } from "@/types";
 
 export const defaultUpgrades: Record<string, number> = {};
 
@@ -13,6 +13,19 @@ export const defaultGame: GameState = {
   screenShake: 0,
   criticalActive: false,
   criticalTimer: 0,
+  damageVignette: 0,
+};
+
+export const defaultRunStats: RunStats = {
+  sliced: 0,
+  missed: 0,
+  bombsAvoided: 0,
+  bombsHit: 0,
+  maxCombo: 0,
+  reikiEarned: 0,
+  wavesCleared: 0,
+  criticals: 0,
+  styleGrade: 'D',
 };
 
 export const defaultCombo: ComboState = {

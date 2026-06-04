@@ -7,6 +7,8 @@ import { MenuScreen } from './components/menu-screen';
 import { GameOverScreen } from './components/game-over-screen';
 import { PauseScreen } from './components/pause-screen';
 import { ShopScreen } from './components/shop-screen';
+import { ReikiPops } from './components/reiki-pops';
+import { WaveClearScreen } from './components/wave-clear-screen';
 
 const LS_KEY = 'cookie_slash_hs';
 
@@ -21,7 +23,7 @@ function saveHighScore(score: number): void {
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { game, shopOpen, resumeGame, setPhase } = useStore();
+  const { game, shopOpen, resumeGame, setPhase, waveClearVisible, finalizeRunStats } = useStore();
   const { startGame } = useGameLoop(canvasRef);
   const [highScore, setHighScore] = useState(loadHighScore);
 
@@ -38,11 +40,15 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (game.phase === 'gameover' && game.score > highScore) {
-      setHighScore(game.score);
-      saveHighScore(game.score);
+    if (game.phase === 'gameover') {
+      finalizeRunStats();
+      if (game.score > highScore) {
+        setHighScore(game.score);
+        saveHighScore(game.score);
+      }
     }
-  }, [game.phase, game.score, highScore]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [game.phase]);
 
   useEffect(() => {
     const prevent = (e: MouseEvent) => e.preventDefault();
@@ -67,6 +73,14 @@ export default function App() {
         )}
       </AnimatePresence>
       {game.phase === 'playing' && <CustomCursor />}
+      {/* Floating reiki pops during play */}
+      {game.phase === 'playing' && <ReikiPops />}
+      {/* Wave clear interstitial */}
+      <AnimatePresence>
+        {waveClearVisible && game.phase === 'playing' && (
+          <WaveClearScreen key="wave-clear" />
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {shopOpen && <ShopScreen key="shop" />}
       </AnimatePresence>

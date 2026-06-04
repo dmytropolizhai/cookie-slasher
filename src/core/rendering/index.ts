@@ -6,7 +6,7 @@ import { drawCookieHalf } from './draw-cookie-half';
 import { drawParticle } from './draw-particle';
 import { drawSlashTrail } from './draw-slash-trail';
 import { drawBackground, type BackgroundContextWithTime } from './draw-background';
-import { drawVignette, drawFlashFrame } from './draw-effects';
+import { drawVignette, drawFlashFrame, drawDamageVignette } from './draw-effects';
 
 export { drawFlashFrame };
 
@@ -77,6 +77,11 @@ export function renderFrame({
 
   // Vignette overlay
   drawVignette(ctx, width, height);
+
+  // Damage vignette (red border flash on taking damage/miss)
+  if (game.damageVignette > 0) {
+    drawDamageVignette(ctx, width, height, game.damageVignette);
+  }
 
   // Flash frame
   if (flashAlpha > 0) {

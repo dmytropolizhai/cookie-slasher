@@ -3,6 +3,7 @@ import {
     GamePhase,
     GameState,
     Particle,
+    RunStats,
     SlashTrail
 } from "@/types";
 
@@ -23,8 +24,31 @@ export interface Store {
   decayShake: () => void;
   triggerCritical: () => void;
   tickCritical: (dt: number) => void;
+  triggerDamageVignette: () => void;
+  decayDamageVignette: (dt: number) => void;
   resetGame: () => void;
   nextWave: () => void;
+
+  // Run stats
+  runStats: RunStats;
+  recordSlice: () => void;
+  recordMiss: () => void;
+  recordBombAvoided: () => void;
+  recordBombHit: () => void;
+  recordCombo: (count: number) => void;
+  recordReikiEarned: (amount: number) => void;
+  recordCritical: () => void;
+  finalizeRunStats: () => void;
+
+  // Floating reiki pops (F10)
+  reikiPops: ReikiPop[];
+  spawnReikiPop: (amount: number, x: number, y: number) => void;
+  removeReikiPop: (id: string) => void;
+
+  // Wave clear
+  waveClearVisible: boolean;
+  showWaveClear: () => void;
+  hideWaveClear: () => void;
 
   // Cookies
   cookies: CookieEntity[];
@@ -63,4 +87,11 @@ export interface Store {
   incrementCombo: () => void;
   breakCombo: (partial?: boolean) => void;
   tickCombo: (dt: number) => void;
+}
+
+export interface ReikiPop {
+  id: string;
+  amount: number;
+  x: number;
+  y: number;
 }

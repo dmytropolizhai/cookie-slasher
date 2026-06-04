@@ -2,7 +2,47 @@ import { create } from 'zustand';
 
 import { Store } from './types';
 import { calcRank, RANK_MULTIPLIERS } from './helpers';
-import { defaultCombo, defaultGame, defaultUpgrades } from './default';
+import { defaultCombo, defaultGame, defaultRunStats, defaultUpgrades } from './default';
+import type { StyleGrade } from '@/types';
+
+let popIdCounter = 0;
+
+function computeStyleGrade(
+  sliced: number,
+  missed: number,
+  maxCombo: number,
+  bombsHit: number,
+  criticals: number,
+): StyleGrade {
+  let score = 0;
+
+  // Accuracy (sliced vs missed ratio)
+  const total = sliced + missed;
+  const accuracy = total > 0 ? sliced / total : 1;
+  if (accuracy >= 0.95) score += 3;
+  else if (accuracy >= 0.85) score += 2;
+  else if (accuracy >= 0.70) score += 1;
+
+  // Max combo
+  if (maxCombo >= 50) score += 4;
+  else if (maxCombo >= 30) score += 3;
+  else if (maxCombo >= 15) score += 2;
+  else if (maxCombo >= 7) score += 1;
+
+  // Bomb avoidance
+  if (bombsHit === 0) score += 2;
+  else if (bombsHit <= 1) score += 1;
+
+  // Criticals show style
+  if (criticals >= 10) score += 2;
+  else if (criticals >= 5) score += 1;
+
+  if (score >= 10) return 'S';
+  if (score >= 7) return 'A';
+  if (score >= 5) return 'B';
+  if (score >= 3) return 'C';
+  return 'D';
+}
 
 
 export const useStore = create<Store>((set, get) => ({
@@ -14,6 +54,9 @@ export const useStore = create<Store>((set, get) => ({
   combo: { ...defaultCombo },
   upgrades: { ...defaultUpgrades },
   shopOpen: false,
+  runStats: { ...defaultRunStats },
+  reikiPops: [],
+  waveClearVisible: false,
 
   // Game
   setPhase: (phase) => set((s) => ({ game: { ...s.game, phase } })),
@@ -72,6 +115,14 @@ export const useStore = create<Store>((set, get) => ({
       return { game: { ...s.game, criticalTimer: t, criticalActive: t > 0 } };
     }),
 
+  triggerDamageVignette: () =>
+    set((s) => ({ game: { ...s.game, damageVignette: 1.0 } })),
+
+  decayDamageVignette: (dt) =>
+    set((s) => ({
+      game: { ...s.game, damageVignette: Math.max(0, s.game.damageVignette - dt * 2.5) },
+    })),
+
   resetGame: () =>
     set(() => ({
       game: { ...defaultGame },
@@ -82,10 +133,65 @@ export const useStore = create<Store>((set, get) => ({
       combo: { ...defaultCombo },
       upgrades: { ...defaultUpgrades },
       shopOpen: false,
+      runStats: { ...defaultRunStats },
+      reikiPops: [],
+      waveClearVisible: false,
     })),
 
   nextWave: () =>
-    set((s) => ({ game: { ...s.game, wave: s.game.wave + 1 } })),
+    set((s) => ({
+      game: { ...s.game, wave: s.game.wave + 1 },
+      runStats: { ...s.runStats, wavesCleared: s.runStats.wavesCleared + 1 },
+    })),
+
+  // Run stats
+  recordSlice: () =>
+    set((s) => ({ runStats: { ...s.runStats, sliced: s.runStats.sliced + 1 } })),
+
+  recordMiss: () =>
+    set((s) => ({ runStats: { ...s.runStats, missed: s.runStats.missed + 1 } })),
+
+  recordBombAvoided: () =>
+    set((s) => ({ runStats: { ...s.runStats, bombsAvoided: s.runStats.bombsAvoided + 1 } })),
+
+  recordBombHit: () =>
+    set((s) => ({ runStats: { ...s.runStats, bombsHit: s.runStats.bombsHit + 1 } })),
+
+  recordCombo: (count) =>
+    set((s) => ({
+      runStats: { ...s.runStats, maxCombo: Math.max(s.runStats.maxCombo, count) },
+    })),
+
+  recordReikiEarned: (amount) =>
+    set((s) => ({
+      runStats: { ...s.runStats, reikiEarned: s.runStats.reikiEarned + amount },
+    })),
+
+  recordCritical: () =>
+    set((s) => ({ runStats: { ...s.runStats, criticals: s.runStats.criticals + 1 } })),
+
+  finalizeRunStats: () =>
+    set((s) => {
+      const { sliced, missed, maxCombo, bombsHit, criticals } = s.runStats;
+      const styleGrade = computeStyleGrade(sliced, missed, maxCombo, bombsHit, criticals);
+      return { runStats: { ...s.runStats, styleGrade } };
+    }),
+
+  // Floating reiki pops
+  spawnReikiPop: (amount, x, y) =>
+    set((s) => ({
+      reikiPops: [
+        ...s.reikiPops,
+        { id: String(++popIdCounter), amount, x, y },
+      ],
+    })),
+
+  removeReikiPop: (id) =>
+    set((s) => ({ reikiPops: s.reikiPops.filter((p) => p.id !== id) })),
+
+  // Wave clear
+  showWaveClear: () => set(() => ({ waveClearVisible: true })),
+  hideWaveClear: () => set(() => ({ waveClearVisible: false })),
 
   // Shop
   openShop: () => set(() => ({ shopOpen: true })),
@@ -114,14 +220,14 @@ export const useStore = create<Store>((set, get) => ({
   addHalf: (h) => set((s) => ({ halves: [...s.halves, h] })),
   removeHalf: (id) => set((s) => ({ halves: s.halves.filter((h) => h.id !== id) })),
   clearHalves: () => set(() => ({ halves: [] })),
-  
+
   // Particles
   addParticle: (p) => set((s) => ({ particles: [...s.particles, p] })),
   removeParticle: (id) =>
     set((s) => ({ particles: s.particles.filter((p) => p.id !== id) })),
   clearParticles: () => set(() => ({ particles: [] })),
 
-  // Slash 
+  // Slash
   pushSlashPoint: (x, y, time) =>
     set((s) => ({
       slash: {
