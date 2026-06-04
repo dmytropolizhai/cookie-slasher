@@ -5,6 +5,16 @@ import { calcRank, RANK_MULTIPLIERS } from './helpers';
 import { defaultCombo, defaultGame, defaultUpgrades } from './default';
 
 
+function loadMuted(): boolean {
+  try { return localStorage.getItem('cookie_slash_muted') === '1'; }
+  catch { return false; }
+}
+
+function loadTutorialSeen(): boolean {
+  try { return localStorage.getItem('cookie_slash_tutorial_seen') === '1'; }
+  catch { return false; }
+}
+
 export const useStore = create<Store>((set, get) => ({
   game: { ...defaultGame },
   cookies: [],
@@ -14,6 +24,8 @@ export const useStore = create<Store>((set, get) => ({
   combo: { ...defaultCombo },
   upgrades: { ...defaultUpgrades },
   shopOpen: false,
+  muted: loadMuted(),
+  tutorialSeen: loadTutorialSeen(),
 
   // Game
   setPhase: (phase) => set((s) => ({ game: { ...s.game, phase } })),
@@ -177,4 +189,18 @@ export const useStore = create<Store>((set, get) => ({
       }
       return { combo: { ...s.combo, decayTimer, flash: false } };
     }),
+
+  // Audio
+  toggleMute: () =>
+    set((s) => {
+      const muted = !s.muted;
+      try { localStorage.setItem('cookie_slash_muted', muted ? '1' : '0'); } catch { /* ignore */ }
+      return { muted };
+    }),
+
+  // Tutorial
+  setTutorialSeen: () => {
+    try { localStorage.setItem('cookie_slash_tutorial_seen', '1'); } catch { /* ignore */ }
+    set(() => ({ tutorialSeen: true }));
+  },
 }));

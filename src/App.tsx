@@ -7,6 +7,7 @@ import { MenuScreen } from './components/menu-screen';
 import { GameOverScreen } from './components/game-over-screen';
 import { PauseScreen } from './components/pause-screen';
 import { ShopScreen } from './components/shop-screen';
+import { TutorialOverlay } from './components/tutorial-overlay';
 
 const LS_KEY = 'cookie_slash_hs';
 
@@ -21,9 +22,10 @@ function saveHighScore(score: number): void {
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { game, shopOpen, resumeGame, setPhase } = useStore();
+  const { game, shopOpen, resumeGame, setPhase, tutorialSeen } = useStore();
   const { startGame } = useGameLoop(canvasRef);
   const [highScore, setHighScore] = useState(loadHighScore);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
     const resize = () => {
@@ -50,14 +52,26 @@ export default function App() {
     return () => window.removeEventListener('contextmenu', prevent);
   }, []);
 
+  function handleStart() {
+    startGame();
+    // Show pre-game tutorial modal for first-time players
+    if (!tutorialSeen) {
+      setShowTutorial(true);
+    }
+  }
+
+  function handleTutorialDone() {
+    setShowTutorial(false);
+  }
+
   return (
     <div className="w-screen h-screen overflow-hidden relative"
-      style={{ background: '#0A0010', cursor: game.phase === 'playing' ? 'none' : 'default' }}>
+      style={{ background: '#0A0010', cursor: game.phase === 'playing' && !showTutorial ? 'none' : 'default' }}>
       <canvas ref={canvasRef} className="absolute inset-0" style={{ display: 'block' }} />
       {(game.phase === 'playing' || game.phase === 'paused') && <HUD />}
       <AnimatePresence mode="wait">
-        {game.phase === 'menu' && <MenuScreen key="menu" onStart={startGame} highScore={highScore} />}
-        {game.phase === 'gameover' && <GameOverScreen key="gameover" onRestart={startGame} highScore={highScore} />}
+        {game.phase === 'menu' && <MenuScreen key="menu" onStart={handleStart} highScore={highScore} />}
+        {game.phase === 'gameover' && <GameOverScreen key="gameover" onRestart={handleStart} highScore={highScore} />}
         {game.phase === 'paused' && (
           <PauseScreen
             key="paused"
@@ -66,9 +80,14 @@ export default function App() {
           />
         )}
       </AnimatePresence>
-      {game.phase === 'playing' && <CustomCursor />}
+      {game.phase === 'playing' && !showTutorial && <CustomCursor />}
       <AnimatePresence>
         {shopOpen && <ShopScreen key="shop" />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showTutorial && game.phase === 'playing' && (
+          <TutorialOverlay key="tutorial" onDone={handleTutorialDone} />
+        )}
       </AnimatePresence>
     </div>
   );

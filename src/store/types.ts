@@ -63,4 +63,12 @@ export interface Store {
   incrementCombo: () => void;
   breakCombo: (partial?: boolean) => void;
   tickCombo: (dt: number) => void;
+
+  // Audio
+  muted: boolean;
+  toggleMute: () => void;
+
+  // Tutorial
+  tutorialSeen: boolean;
+  setTutorialSeen: () => void;
 }

@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
 import { UPGRADES } from '../systems/shop';
 
@@ -110,8 +110,9 @@ function GlitchTitle({ text }: { text: string }) {
 }
 
 export function PauseScreen({ onResume, onQuit }: PauseScreenProps) {
-  const { game, upgrades, openShop } = useStore();
+  const { game, upgrades, openShop, muted, toggleMute } = useStore();
   const injected = useRef(false);
+  const [showAbandon, setShowAbandon] = useState(false);
 
   const ownedCount = UPGRADES.filter((u) => (upgrades[u.id] ?? 0) > 0).length;
 
@@ -169,6 +170,30 @@ export function PauseScreen({ onResume, onQuit }: PauseScreenProps) {
           background: 'rgba(10,0,24,0.85)',
         }}
       >
+        {/* Mute toggle — top-right corner of card */}
+        <motion.button
+          whileHover={{ scale: 1.15, opacity: 1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={toggleMute}
+          style={{
+            position: 'absolute',
+            top: 14,
+            right: 18,
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: 12,
+            color: muted ? '#555' : '#00FFFF',
+            textShadow: muted ? 'none' : '0 0 8px #00FFFF',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            opacity: muted ? 0.5 : 0.85,
+            letterSpacing: 0,
+          }}
+          title={muted ? 'Unmute' : 'Mute'}
+        >
+          {muted ? '🔇' : '🔊'}
+        </motion.button>
+
         {/* Japanese subtitle */}
         <div
           style={{
@@ -212,9 +237,9 @@ export function PauseScreen({ onResume, onQuit }: PauseScreenProps) {
           />
           <ShopButton reiki={game.reiki} ownedCount={ownedCount} onClick={openShop} />
           <PauseButton
-            label="⏎  QUIT TO MENU"
+            label="✕  ABANDON RUN"
             primary={false}
-            onClick={onQuit}
+            onClick={() => setShowAbandon(true)}
           />
         </div>
 
@@ -230,11 +255,147 @@ export function PauseScreen({ onResume, onQuit }: PauseScreenProps) {
           [ESC] TO RESUME
         </div>
       </motion.div>
+
+      {/* Abandon Run confirmation */}
+      <AnimatePresence>
+        {showAbandon && (
+          <AbandonConfirm
+            onConfirm={onQuit}
+            onCancel={() => setShowAbandon(false)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+function AbandonConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.12 }}
+      className="absolute inset-0 flex items-center justify-center"
+      style={{ zIndex: 10, background: 'rgba(2,0,8,0.82)', backdropFilter: 'blur(4px)' }}
+      onClick={onCancel}
+    >
+      <motion.div
+        initial={{ scale: 0.82, opacity: 0, y: 16 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.82, opacity: 0, y: 16 }}
+        transition={{ type: 'spring', stiffness: 340, damping: 26 }}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 20,
+          padding: '44px 56px',
+          border: '2px solid rgba(255,0,128,0.5)',
+          background: 'rgba(10,0,24,0.96)',
+          boxShadow: '0 0 40px rgba(255,0,128,0.2), 0 0 80px rgba(0,0,0,0.8)',
+          maxWidth: 400,
+          width: '80vw',
+        }}
+      >
+        {/* Warning icon */}
+        <div
+          style={{
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: 36,
+            color: '#FF0080',
+            textShadow: '0 0 20px #FF0080',
+            lineHeight: 1,
+          }}
+        >
+          ⚠
+        </div>
+
+        {/* Title */}
+        <div
+          style={{
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: 16,
+            color: '#FF0080',
+            textShadow: '0 0 16px #FF0080',
+            letterSpacing: 2,
+            textAlign: 'center',
+          }}
+        >
+          ABANDON RUN?
+        </div>
+
+        {/* Divider */}
+        <div
+          style={{
+            width: '100%',
+            height: 1,
+            background: 'linear-gradient(90deg, transparent, rgba(255,0,128,0.5), transparent)',
+          }}
+        />
+
+        {/* Warning text */}
+        <div
+          style={{
+            fontFamily: '"Press Start 2P", monospace',
+            fontSize: 7,
+            color: '#888',
+            lineHeight: 2.2,
+            textAlign: 'center',
+            maxWidth: 280,
+          }}
+        >
+          Your current progress will be lost. Score and 霊気 will not be saved.
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-4 w-full">
+          <motion.button
+            whileHover={{ scale: 1.04, boxShadow: '0 0 20px rgba(155,0,255,0.5)' }}
+            whileTap={{ scale: 0.96 }}
+            onClick={onCancel}
+            style={{
+              flex: 1,
+              fontFamily: '"Press Start 2P", monospace',
+              fontSize: 10,
+              color: '#9B00FF',
+              background: 'transparent',
+              border: '2px solid rgba(155,0,255,0.4)',
+              padding: '12px 0',
+              cursor: 'pointer',
+              letterSpacing: 1,
+            }}
+          >
+            {'<'} STAY
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.04, boxShadow: '0 0 28px rgba(255,0,128,0.5)' }}
+            whileTap={{ scale: 0.96 }}
+            onClick={onConfirm}
+            style={{
+              flex: 1,
+              fontFamily: '"Press Start 2P", monospace',
+              fontSize: 10,
+              color: '#fff',
+              background: 'linear-gradient(135deg, #9B00FF, #FF0080)',
+              border: '2px solid #FF0080',
+              boxShadow: '0 0 12px rgba(255,0,128,0.4)',
+              padding: '12px 0',
+              cursor: 'pointer',
+              letterSpacing: 1,
+              textShadow: '0 0 6px rgba(255,255,255,0.7)',
+            }}
+          >
+            QUIT
+          </motion.button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
 
 function StatPill({ label, value, color }: { label: string; value: string; color: string }) {
   return (
@@ -266,7 +427,7 @@ function StatPill({ label, value, color }: { label: string; value: string; color
 function ShopButton({ reiki, ownedCount, onClick }: { reiki: number; ownedCount: number; onClick: () => void }) {
   return (
     <motion.button
-      whileHover={{ scale: 1.04, boxShadow: '0 0 28px rgba(255,230,0,0.5)' }}
+      whileHover={{ scale: 1.04, boxShadow: '0 0 28px rgba(255,230,0,0.5)', borderColor: '#FFE600' }}
       whileTap={{ scale: 0.96 }}
       onClick={onClick}
       style={{
@@ -284,11 +445,12 @@ function ShopButton({ reiki, ownedCount, onClick }: { reiki: number; ownedCount:
         alignItems: 'center',
         justifyContent: 'center',
         gap: 16,
+        textShadow: '0 0 8px rgba(255,230,0,0.6)',
         transition: 'border-color 0.2s',
       }}
     >
       ★  UPGRADE SHOP
-      <span style={{ fontSize: 8, color: '#FFE600', opacity: 0.7 }}>
+      <span style={{ fontSize: 8, color: '#FFE600', opacity: 0.7, textShadow: 'none' }}>
         ¥{reiki}{ownedCount > 0 ? `  ·  ${ownedCount} owned` : ''}
       </span>
     </motion.button>
