@@ -87,6 +87,31 @@ export const useStore = create<Store>((set, get) => ({
   nextWave: () =>
     set((s) => ({ game: { ...s.game, wave: s.game.wave + 1 } })),
 
+  startBoss: (phase, hp) =>
+    set((s) => ({
+      game: {
+        ...s.game,
+        bossActive: true,
+        bossPhase: phase,
+        bossHp: hp,
+        bossMaxHp: hp,
+      },
+    })),
+
+  damageBoss: (dmg) =>
+    set((s) => {
+      const bossHp = Math.max(0, s.game.bossHp - dmg);
+      return { game: { ...s.game, bossHp } };
+    }),
+
+  endBoss: () =>
+    set((s) => ({
+      game: { ...s.game, bossActive: false, bossHp: 0, bossMaxHp: 0 },
+    })),
+
+  markBossIntro: (wave) =>
+    set((s) => ({ game: { ...s.game, bossIntroWave: wave } })),
+
   // Shop
   openShop: () => set(() => ({ shopOpen: true })),
   closeShop: () => set(() => ({ shopOpen: false })),

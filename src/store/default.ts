@@ -13,6 +13,11 @@ export const defaultGame: GameState = {
   screenShake: 0,
   criticalActive: false,
   criticalTimer: 0,
+  bossActive: false,
+  bossPhase: 1,
+  bossHp: 0,
+  bossMaxHp: 0,
+  bossIntroWave: 0,
 };
 
 export const defaultCombo: ComboState = {

@@ -7,6 +7,8 @@ import { MenuScreen } from './components/menu-screen';
 import { GameOverScreen } from './components/game-over-screen';
 import { PauseScreen } from './components/pause-screen';
 import { ShopScreen } from './components/shop-screen';
+import { BossIntroScreen } from './components/boss-intro-screen';
+import { getBossPhase } from '@/systems/boss/data';
 
 const LS_KEY = 'cookie_slash_hs';
 
@@ -21,7 +23,7 @@ function saveHighScore(score: number): void {
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { game, shopOpen, resumeGame, setPhase } = useStore();
+  const { game, shopOpen, resumeGame, setPhase, markBossIntro } = useStore();
   const { startGame } = useGameLoop(canvasRef);
   const [highScore, setHighScore] = useState(loadHighScore);
 
@@ -63,6 +65,17 @@ export default function App() {
             key="paused"
             onResume={resumeGame}
             onQuit={() => setPhase('menu')}
+          />
+        )}
+        {game.phase === 'boss_intro' && (
+          <BossIntroScreen
+            key={`boss-intro-${game.wave}`}
+            phase={getBossPhase(game.wave)}
+            wave={game.wave}
+            onComplete={() => {
+              markBossIntro(game.wave);
+              setPhase('playing');
+            }}
           />
         )}
       </AnimatePresence>

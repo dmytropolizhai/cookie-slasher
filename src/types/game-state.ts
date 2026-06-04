@@ -11,4 +11,10 @@ export interface GameState {
   screenShake: number;
   criticalActive: boolean;
   criticalTimer: number;
+  // Boss fight state
+  bossActive: boolean;
+  bossPhase: 1 | 2 | 3;
+  bossHp: number;
+  bossMaxHp: number;
+  bossIntroWave: number;  // wave that triggered boss_intro (avoid re-showing)
 }

@@ -20,6 +20,7 @@ import { checkSlashHit } from '@/systems/slash/hit-detection';
 import { spawnCookie } from '@/systems/cookies/factory';
 import { stepCookie } from '@/systems/cookies/movement';
 import { stepHalf } from '@/systems/halves';
+import { getBossPhase, getBossHpForPhase } from '@/systems/boss/data';
 
 import type { CookieHalf, Vec2 } from '@/types';
 
@@ -168,18 +169,23 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
             makeCrumbs(cookie.pos, 'fake', 8).forEach(s.addParticle);
           } else if (cookie.type === 'boss') {
             const newHp = cookie.hp - 1;
+            s.damageBoss(1);
             if (newHp <= 0) {
               s.updateCookie(cookie.id, { state: 'sliced', hp: 0 });
-              s.addScore(500);
-              s.addReiki(100);
+              s.endBoss();
+              // Score scales with phase
+              const phaseBonus = (cookie.phase || 1) * 250;
+              s.addScore(500 + phaseBonus);
+              s.addReiki(100 + (cookie.phase || 1) * 30);
               s.incrementCombo();
               makeCriticalBurst(cookie.pos, 30).forEach(s.addParticle);
               makeNeonFragments(cookie.pos, 20).forEach(s.addParticle);
               flashAlphaRef.current = 0.5;
             } else {
               s.updateCookie(cookie.id, { hp: newHp });
-              s.triggerShake(3);
+              s.triggerShake(3 + (cookie.phase || 1));
               makeImpactSparks(cookie.pos, 8).forEach(s.addParticle);
+              makeNeonFragments(cookie.pos, 4).forEach(s.addParticle);
             }
           } else {
             // NORMAL / GOLDEN
@@ -287,17 +293,30 @@ export function useGameLoop(canvasRef: React.RefObject<HTMLCanvasElement | null>
       s.addParticle(makeSakuraPetal(canvasW));
     }
 
-    //  Spawn director 
+    //  Spawn director
     const director = directorRef.current;
     const cookieType = director.tick(rawDt);
     if (cookieType) {
-      s.addCookie(spawnCookie(cookieType as import('../types').CookieType, canvasW, director.getSpeed()));
+      s.addCookie(spawnCookie(cookieType as import('../types').CookieType, canvasW, director.getSpeed(), s.game.wave));
+      // When boss is spawned, update the store with its phase data
+      if (cookieType === 'boss') {
+        const bossPhase = getBossPhase(s.game.wave);
+        const bossHp = getBossHpForPhase(bossPhase);
+        s.startBoss(bossPhase, bossHp);
+      }
     }
 
     if (director.isWaveComplete() && s.cookies.filter((c) => c.state === 'falling').length === 0) {
+      if (s.game.bossActive) s.endBoss();
       s.nextWave();
-      director.reset(s.game.wave + 1);
+      const nextWave = s.game.wave + 1;
+      director.reset(nextWave);
       blastRuneUsedRef.current = false;
+
+      // Trigger boss_intro for next boss wave
+      if (nextWave % 5 === 0 && s.game.bossIntroWave !== nextWave) {
+        s.setPhase('boss_intro');
+      }
     }
 
     //  Render 

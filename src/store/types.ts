@@ -25,6 +25,10 @@ export interface Store {
   tickCritical: (dt: number) => void;
   resetGame: () => void;
   nextWave: () => void;
+  startBoss: (phase: 1 | 2 | 3, hp: number) => void;
+  damageBoss: (dmg: number) => void;
+  endBoss: () => void;
+  markBossIntro: (wave: number) => void;
 
   // Cookies
   cookies: CookieEntity[];

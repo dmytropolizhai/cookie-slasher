@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store';
+import { BOSS_PHASES } from '@/systems/boss/data';
 
 const RANK_COLORS: Record<string, string> = {
   D: '#888888',
@@ -36,6 +37,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
 
 export function HUD() {
   const { game, combo, openShop } = useStore();
+  const bossData = game.bossActive ? BOSS_PHASES[game.bossPhase] : null;
   const rankColor = RANK_COLORS[combo.rank] ?? '#888';
   const rankShadow = RANK_SHADOW[combo.rank] ?? '';
 
@@ -127,6 +129,73 @@ export function HUD() {
       <button className="absolute bottom-6 right-6" onClick={() => openShop()}>
         Shop
       </button>
+
+      {/* Boss HP Bar */}
+      <AnimatePresence>
+        {bossData && game.bossHp > 0 && (
+          <motion.div
+            key="boss-hp"
+            initial={{ y: -40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -40, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+            style={{
+              position: 'absolute',
+              top: 72,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 4,
+              minWidth: 280,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: 8,
+                color: bossData.color,
+                letterSpacing: 3,
+                textShadow: `0 0 8px ${bossData.color}`,
+              }}
+            >
+              {bossData.label} — BOSS
+            </div>
+            <div
+              style={{
+                width: 280,
+                height: 10,
+                background: 'rgba(0,0,0,0.5)',
+                borderRadius: 5,
+                overflow: 'hidden',
+                border: `1px solid ${bossData.color}55`,
+              }}
+            >
+              <motion.div
+                style={{
+                  height: '100%',
+                  background: bossData.color,
+                  boxShadow: `0 0 10px ${bossData.glowColor}`,
+                  transformOrigin: 'left',
+                }}
+                animate={{ scaleX: game.bossHp / game.bossMaxHp }}
+                transition={{ duration: 0.2 }}
+              />
+            </div>
+            <div
+              style={{
+                fontFamily: '"Press Start 2P", monospace',
+                fontSize: 7,
+                color: bossData.glowColor,
+                letterSpacing: 1,
+              }}
+            >
+              {game.bossHp} / {game.bossMaxHp}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* HP Bar */}
       <div className="absolute bottom-6 left-6 flex flex-col gap-2">
