@@ -1,5 +1,7 @@
 import {
     ComboState,
+    DailyChallengeRecord,
+    GameMode,
     GamePhase,
     GameState,
     Particle,
@@ -24,12 +26,16 @@ export interface Store {
   decayShake: () => void;
   triggerCritical: () => void;
   tickCritical: (dt: number) => void;
-  resetGame: () => void;
+  resetGame: (mode?: GameMode, dailyDate?: string) => void;
   nextWave: () => void;
   startBoss: (phase: 1 | 2 | 3, hp: number) => void;
   damageBoss: (dmg: number) => void;
   endBoss: () => void;
   markBossIntro: (wave: number) => void;
+
+  // Daily challenge
+  dailyRecord: DailyChallengeRecord | null;
+  saveDailyRecord: (record: DailyChallengeRecord) => void;
 
   // Cookies
   cookies: CookieEntity[];

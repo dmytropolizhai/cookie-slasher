@@ -6,8 +6,8 @@ import type { CookieType } from '@/types/cookie';
 
 /**
  * Spawn director
- *
- * Use to control cookie spawning based on wave number
+ * Use to control cookie spawning based on wave number.
+ * Pass a seeded RNG factory to produce deterministic spawns (daily challenge).
  */
 export class SpawnDirector {
   private config: WaveConfig;
@@ -15,10 +15,12 @@ export class SpawnDirector {
   private timer = 0;
   private bossCountdown: number;
   private rng: () => number;
+  private rngFactory: ((wave: number) => () => number) | null;
 
-  constructor(wave: number) {
+  constructor(wave: number, rngFactory?: (wave: number) => () => number) {
     this.config = buildWaveConfig(wave);
-    this.rng = Math.random;
+    this.rngFactory = rngFactory ?? null;
+    this.rng = rngFactory ? rngFactory(wave) : Math.random;
     this.bossCountdown = this.config.bossSpawnIndex ?? -1;
   }
 
@@ -95,6 +97,7 @@ export class SpawnDirector {
     this.config = buildWaveConfig(wave);
     this.spawnedCount = 0;
     this.timer = 0;
+    this.rng = this.rngFactory ? this.rngFactory(wave) : Math.random;
     this.bossCountdown = this.config.bossSpawnIndex ?? -1;
   }
 }

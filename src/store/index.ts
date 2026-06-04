@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 
-import { Store } from './types';
+import type { Store, DailyChallengeRecord, GameMode } from './types';
 import { calcRank, RANK_MULTIPLIERS } from './helpers';
 import { defaultCombo, defaultGame, defaultUpgrades, defaultAchievements, defaultStats } from './default';
 
 // ── Persistence helpers ───────────────────────────────────────────────────────
-
+const LS_DAILY_KEY = 'cookie_slash_daily';
 const LS_ACHIEVEMENTS = 'cookie_slash_achievements';
 const LS_STATS = 'cookie_slash_stats';
 
@@ -33,7 +33,16 @@ function saveStats(stats: Store['stats']) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const useStore = create<Store>((set, get) => ({
+function loadDailyRecord(): DailyChallengeRecord | null {
+  try {
+    const raw = localStorage.getItem(LS_DAILY_KEY);
+    return raw ? (JSON.parse(raw) as DailyChallengeRecord) : null;
+  } catch {
+    return null;
+  }
+}
+
+export const useStore = create<Store>((set, _get) => ({
   game: { ...defaultGame },
   cookies: [],
   halves: [],
@@ -42,6 +51,7 @@ export const useStore = create<Store>((set, get) => ({
   combo: { ...defaultCombo },
   upgrades: { ...defaultUpgrades },
   shopOpen: false,
+  dailyRecord: loadDailyRecord(),
 
   // Achievements (persist)
   achievements: loadAchievements(),
@@ -108,9 +118,9 @@ export const useStore = create<Store>((set, get) => ({
       return { game: { ...s.game, criticalTimer: t, criticalActive: t > 0 } };
     }),
 
-  resetGame: () =>
+  resetGame: (mode: GameMode = 'endless', dailyDate: string | null = null) =>
     set(() => ({
-      game: { ...defaultGame },
+      game: { ...defaultGame, mode, dailyDate },
       cookies: [],
       halves: [],
       particles: [],
@@ -119,6 +129,13 @@ export const useStore = create<Store>((set, get) => ({
       upgrades: { ...defaultUpgrades },
       shopOpen: false,
     })),
+
+  // Daily challenge
+  saveDailyRecord: (record: DailyChallengeRecord) =>
+    set(() => {
+      try { localStorage.setItem(LS_DAILY_KEY, JSON.stringify(record)); } catch { /* ignore */ }
+      return { dailyRecord: record };
+    }),
 
   nextWave: () =>
     set((s) => ({ game: { ...s.game, wave: s.game.wave + 1 } })),
